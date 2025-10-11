@@ -1,0 +1,16 @@
+// Custom styles if needed
+.station-component {
+  // Add any custom styles here
+}
+
+// Smooth transitions
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+// Responsive table
+@media (max-width: 768px) {
+  .tw-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,682 @@
+<main [class]="'tw-pt-4 tw-pb-4 tw-transition-all tw-duration-300 tw-overflow-auto ' + (isSidebarCollapsed ? ' tw-ml-16' : ' tw-ml-64')">
+  
+  <!-- List View -->
+  <div *ngIf="mode === 'list'" class="tw-p-4 md:tw-p-7">
+    <div class="tw-flex tw-flex-col sm:tw-flex-row tw-items-start sm:tw-items-center tw-justify-between tw-mb-4 tw-gap-3">
+      <h2 class="tw-text-xl tw-font-bold tw-text-gray-900 tw-uppercase">Collie Registration</h2>
+      <div class="tw-flex tw-gap-2">
+        <button (click)="loadPendingCollies()" [disabled]="isLoading"
+                class="tw-bg-gray-600 hover:tw-bg-gray-700 disabled:tw-bg-gray-400 tw-text-white tw-px-3 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-gap-2">
+          <i [class]="isLoading ? 'ph ph-spinner tw-animate-spin' : 'ph ph-arrow-clockwise'"></i>
+          <span class="tw-hidden sm:tw-inline">Refresh</span>
+        </button>
+        <button (click)="openRegisterForm()" 
+                class="tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-gap-2">
+          <i class="ph ph-plus"></i>
+          <span class="tw-hidden sm:tw-inline">Register Collie</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tw-flex tw-flex-col sm:tw-flex-row tw-items-end tw-gap-4 tw-mb-6">
+      <div class="tw-flex-1 tw-w-full">
+        <small class="tw-font-semibold tw-block tw-mb-1">Search</small>
+        <input type="text" 
+               class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md" 
+               placeholder="Search by name, mobile, buckle number or station" 
+               [(ngModel)]="searchTerm">
+      </div>
+      <div class="tw-w-full sm:tw-w-44">
+        <small class="tw-font-semibold tw-block tw-mb-1">Page Size</small>
+        <ng-select [items]="[10,20,50,100]" 
+                   [(ngModel)]="paginationConfig.itemsPerPage" 
+                   (ngModelChange)="onPageSizeChange()">
+          <ng-template ng-option-tmp let-item="item">{{item}} per page</ng-template>
+        </ng-select>
+      </div>
+    </div>
+
+    <div class="tw-bg-white tw-rounded-lg tw-shadow-md tw-overflow-hidden">
+      <!-- Desktop Table View -->
+      <div class="tw-hidden md:tw-block tw-overflow-x-auto">
+        <table class="tw-w-full tw-border-collapse">
+          <thead class="tw-bg-gray-50">
+            <tr>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">#</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Collie</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Contact</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Buckle Number</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Station</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Status</th>
+              <th class="tw-px-4 tw-py-3 tw-text-center tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="tw-divide-y tw-divide-gray-200">
+            <tr *ngIf="isLoading">
+              <td colspan="7" class="tw-px-4 tw-py-8 tw-text-center">
+                <div class="tw-animate-spin tw-rounded-full tw-h-8 tw-w-8 tw-border-b-2 tw-border-blue-600 tw-mx-auto"></div>
+              </td>
+            </tr>
+            <tr *ngFor="let collie of filteredCollies | paginate: paginationConfig; let i = index" 
+                class="hover:tw-bg-gray-50">
+              <td class="tw-px-4 tw-py-4 tw-text-sm">
+                {{(paginationConfig.currentPage-1)*paginationConfig.itemsPerPage+i+1}}
+              </td>
+              <td class="tw-px-4 tw-py-4">
+                <div class="tw-flex tw-items-center">
+                  <img [src]="getCollieImage(collie)" 
+                       [alt]="collie.name" 
+                       class="tw-h-10 tw-w-10 tw-rounded-full tw-object-cover tw-border-2 tw-border-gray-300">
+                  <div class="tw-ml-3">
+                    <div class="tw-text-sm tw-font-medium tw-text-gray-900">{{collie.name}}</div>
+                    <div class="tw-text-xs tw-text-gray-500">{{collie.gender}} • {{collie.age}} years</div>
+                  </div>
+                </div>
+              </td>
+              <td class="tw-px-4 tw-py-4">
+                <div class="tw-text-sm tw-text-gray-900">{{collie.mobileNo}}</div>
+                <div class="tw-text-sm tw-text-gray-500">{{collie.emailId || 'N/A'}}</div>
+              </td>
+              <td class="tw-px-4 tw-py-4">
+                <span class="tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full tw-bg-purple-100 tw-text-purple-800">
+                  {{collie.buckleNumber}}
+                </span>
+              </td>
+              <td class="tw-px-4 tw-py-4">
+                <div class="tw-text-sm tw-font-medium tw-text-gray-900">{{getStationName(collie.stationId)}}</div>
+                <div class="tw-text-xs tw-text-gray-500">Code: {{getStationCode(collie.stationId)}}</div>
+              </td>
+              <td class="tw-px-4 tw-py-4">
+                <span [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full ' + getApprovalStatusClass()">
+                  {{getApprovalStatusText()}}
+                </span>
+              </td>
+              <td class="tw-px-4 tw-py-4 tw-text-center">
+                <div class="tw-flex tw-items-center tw-justify-center tw-gap-1">
+                  <button (click)="previewCollie(collie)" 
+                          title="Preview" 
+                          class="tw-p-2 tw-text-green-600 hover:tw-bg-green-50 tw-rounded-md">
+                    <i class="ph ph-eye tw-text-lg"></i>
+                  </button>
+                  <button (click)="approveCollie(collie._id!)" 
+                          title="Approve" 
+                          class="tw-p-2 tw-text-blue-600 hover:tw-bg-blue-50 tw-rounded-md">
+                    <i class="ph ph-check-circle tw-text-lg"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="!isLoading && filteredCollies.length === 0">
+              <td colspan="7" class="tw-text-center tw-py-12">
+                <i class="ph ph-users tw-text-6xl tw-text-gray-300"></i>
+                <p class="tw-text-gray-500 tw-mt-4">No pending collie registrations found</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div class="md:tw-hidden">
+        <div *ngFor="let collie of filteredCollies | paginate: paginationConfig" 
+             class="tw-border-b tw-p-4">
+          <div class="tw-flex tw-items-start tw-gap-3">
+            <img [src]="getCollieImage(collie)" 
+                 class="tw-h-12 tw-w-12 tw-rounded-full tw-object-cover tw-border-2 tw-border-gray-300">
+            <div class="tw-flex-1">
+              <p class="tw-font-medium tw-text-gray-900">{{collie.name}}</p>
+              <p class="tw-text-sm tw-text-gray-500">{{collie.mobileNo}}</p>
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mt-1">
+                <span class="tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full tw-bg-purple-100 tw-text-purple-800">
+                  {{collie.buckleNumber}}
+                </span>
+                <span [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full ' + getApprovalStatusClass()">
+                  {{getApprovalStatusText()}}
+                </span>
+              </div>
+              <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Station: {{getStationName(collie.stationId)}}</p>
+              <div class="tw-flex tw-gap-1 tw-mt-2">
+                <button (click)="previewCollie(collie)" 
+                        class="tw-p-1.5 tw-text-green-600 hover:tw-bg-green-50 tw-rounded-md">
+                  <i class="ph ph-eye"></i>
+                </button>
+                <button (click)="approveCollie(collie._id!)" 
+                        class="tw-p-1.5 tw-text-blue-600 hover:tw-bg-blue-50 tw-rounded-md">
+                  <i class="ph ph-check-circle"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tw-mt-6 tw-flex tw-justify-center" *ngIf="filteredCollies.length > 0">
+      <pagination-controls [id]="'collie-pagination'" 
+                           (pageChange)="onPageChange($event)" 
+                           [maxSize]="5" 
+                           [directionLinks]="true" 
+                           previousLabel="Previous" 
+                           nextLabel="Next">
+      </pagination-controls>
+    </div>
+  </div>
+
+  <!-- Register Form Modal -->
+  <div *ngIf="mode === 'register'" 
+       class="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50 tw-p-4">
+    <div class="tw-bg-white tw-rounded-lg tw-shadow-xl tw-w-full tw-max-w-2xl tw-max-h-[95vh] tw-overflow-hidden">
+      <div class="tw-flex tw-items-center tw-justify-between tw-p-4 sm:tw-p-6 tw-border-b tw-bg-blue-50">
+        <div>
+          <h3 class="tw-text-lg sm:tw-text-xl tw-font-bold tw-text-blue-900">Register New Collie</h3>
+          <p class="tw-text-sm tw-text-blue-700">Fill in the details to register a new collie</p>
+        </div>
+        <button (click)="cancelForm()" 
+                class="tw-text-gray-400 hover:tw-text-gray-600 tw-text-xl sm:tw-text-2xl tw-transition-colors tw-p-1">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <div class="tw-p-4 sm:tw-p-6 tw-overflow-y-auto tw-max-h-[75vh]">
+        <form [formGroup]="collieForm" (ngSubmit)="onSubmit()" class="tw-space-y-4">
+          
+          <!-- Profile Image Upload/Capture -->
+          <div class="tw-text-center">
+            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+              Profile Picture <code class="tw-text-red-500">*</code>
+              <span class="tw-text-gray-500 tw-text-xs">[Max 5MB, JPG/PNG only]</span>
+            </label>
+
+            <!-- Action Buttons -->
+            <div *ngIf="!selectedFile && !capturedImageUrl && !isCameraOpen" class="tw-flex tw-gap-2 tw-mb-3">
+              <button type="button"
+                      (click)="openCamera()"
+                      [disabled]="isCameraLoading"
+                      class="tw-flex-1 tw-bg-purple-600 hover:tw-bg-purple-700 disabled:tw-bg-purple-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+                <i [class]="isCameraLoading ? 'ph ph-spinner tw-animate-spin' : 'ph ph-camera'"></i>
+                <span>{{ isCameraLoading ? 'Opening Camera...' : 'Open Camera' }}</span>
+              </button>
+              <button type="button"
+                      (click)="fileInput.click()"
+                      class="tw-flex-1 tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+                <i class="ph ph-folder-open"></i>
+                <span>Choose File</span>
+              </button>
+            </div>
+
+            <!-- Hidden File Input -->
+            <input #fileInput 
+                   type="file" 
+                   (change)="onFileSelected($event)"
+                   accept="image/jpeg,image/jpg,image/png" 
+                   class="tw-hidden">
+
+            <!-- Camera View -->
+            <div *ngIf="isCameraOpen" class="tw-space-y-3">
+              <div class="tw-relative tw-bg-black tw-rounded-lg tw-overflow-hidden">
+                <video #videoElement 
+                       autoplay 
+                       playsinline
+                       class="tw-w-full tw-h-auto tw-max-h-96"></video>
+                <canvas #canvasElement class="tw-hidden"></canvas>
+              </div>
+              <div class="tw-flex tw-gap-2">
+                <button type="button"
+                        (click)="capturePhoto()"
+                        class="tw-flex-1 tw-bg-green-600 hover:tw-bg-green-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+                  <i class="ph ph-camera"></i>
+                  <span>Capture Photo</span>
+                </button>
+                <button type="button"
+                        (click)="stopCamera()"
+                        class="tw-flex-1 tw-bg-red-600 hover:tw-bg-red-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+                  <i class="ph ph-x"></i>
+                  <span>Cancel</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Drag & Drop Zone (only show if no camera and no file) -->
+            <div *ngIf="!isCameraOpen && !selectedFile && !capturedImageUrl"
+                 class="tw-border-2 tw-border-dashed tw-border-gray-300 tw-rounded-md tw-p-4 tw-text-center hover:tw-border-blue-400 tw-transition-colors"
+                 [class.tw-border-red-400]="fileError"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
+                 (drop)="onDrop($event)">
+              <i class="ph ph-image tw-text-2xl sm:tw-text-3xl tw-text-gray-400 tw-mb-2"></i>
+              <p class="tw-text-sm tw-text-gray-600">
+                Or drag & drop image here
+              </p>
+              <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Maximum file size: 5MB</p>
+            </div>
+
+            <!-- Preview (File or Captured Photo) -->
+            <div *ngIf="selectedFile || capturedImageUrl" class="tw-space-y-3">
+              <div class="tw-flex tw-justify-center">
+                <img [src]="getImagePreviewUrl()" 
+                     [alt]="selectedFile?.name || 'Captured photo'"
+                     class="tw-w-32 tw-h-32 sm:tw-w-40 sm:tw-h-40 tw-object-cover tw-rounded-full tw-border-4 tw-border-gray-300">
+              </div>
+              <div class="tw-flex tw-items-center tw-justify-center tw-gap-2">
+                <div class="tw-text-center">
+                  <p class="tw-text-sm tw-font-medium tw-text-gray-900">
+                    {{ selectedFile ? selectedFile.name : 'Captured Photo' }}
+                  </p>
+                  <p *ngIf="selectedFile" class="tw-text-xs tw-text-gray-500">
+                    {{ getFileSize(selectedFile.size) }}
+                  </p>
+                </div>
+              </div>
+              <div class="tw-flex tw-gap-2">
+                <button type="button" 
+                        (click)="capturedImageUrl ? removeCapturedPhoto() : removeSelectedFile()"
+                        class="tw-flex-1 tw-bg-red-500 hover:tw-bg-red-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+                  <i class="ph ph-trash"></i>
+                  <span>Remove</span>
+                </button>
+                <button *ngIf="capturedImageUrl"
+                        type="button" 
+                        (click)="retakePhoto()"
+                        class="tw-flex-1 tw-bg-purple-500 hover:tw-bg-purple-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+                  <i class="ph ph-camera"></i>
+                  <span>Retake</span>
+                </button>
+                <button *ngIf="selectedFile"
+                        type="button" 
+                        (click)="fileInput.click()"
+                        class="tw-flex-1 tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+                  <i class="ph ph-folder-open"></i>
+                  <span>Change</span>
+                </button>
+              </div>
+            </div>
+
+            <p *ngIf="fileError" class="tw-text-red-500 tw-text-sm tw-mt-2">{{ fileError }}</p>
+          </div>
+
+          <!-- Two Column Layout for Form Fields -->
+          <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+            
+            <!-- Name -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Full Name <code class="tw-text-red-500">*</code>
+              </label>
+              <input formControlName="name" 
+                     type="text" 
+                     placeholder="Enter full name"
+                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
+                     [class.tw-border-red-500]="isFieldInvalid('name')">
+              <p *ngIf="isFieldInvalid('name')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('name') }}
+              </p>
+            </div>
+
+            <!-- Mobile Number -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Mobile Number <code class="tw-text-red-500">*</code>
+              </label>
+              <input formControlName="mobileNo" 
+                     type="tel" 
+                     placeholder="Enter 10-digit mobile number"
+                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
+                     [class.tw-border-red-500]="isFieldInvalid('mobileNo')">
+              <p *ngIf="isFieldInvalid('mobileNo')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('mobileNo') }}
+              </p>
+            </div>
+
+            <!-- Age -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Age <code class="tw-text-red-500">*</code>
+              </label>
+              <input formControlName="age" 
+                     type="number" 
+                     placeholder="Enter age (18-65)"
+                     min="18"
+                     max="65"
+                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
+                     [class.tw-border-red-500]="isFieldInvalid('age')">
+              <p *ngIf="isFieldInvalid('age')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('age') }}
+              </p>
+            </div>
+
+            <!-- Gender -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Gender <code class="tw-text-red-500">*</code>
+              </label>
+              <ng-select formControlName="gender" 
+                         placeholder="Select gender"
+                         [class.tw-border-red-500]="isFieldInvalid('gender')">
+                <ng-option *ngFor="let gender of genders" [value]="gender">
+                  {{gender}}
+                </ng-option>
+              </ng-select>
+              <p *ngIf="isFieldInvalid('gender')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('gender') }}
+              </p>
+            </div>
+
+            <!-- Email (Optional) -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Email Address
+              </label>
+              <input formControlName="emailId" 
+                     type="email" 
+                     placeholder="Enter email address"
+                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
+                     [class.tw-border-red-500]="isFieldInvalid('emailId')">
+              <p *ngIf="isFieldInvalid('emailId')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('emailId') }}
+              </p>
+            </div>
+
+            <!-- Buckle Number -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Buckle Number <code class="tw-text-red-500">*</code>
+              </label>
+              <input formControlName="buckleNumber" 
+                     type="text" 
+                     placeholder="Enter buckle number"
+                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
+                     [class.tw-border-red-500]="isFieldInvalid('buckleNumber')">
+              <p *ngIf="isFieldInvalid('buckleNumber')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('buckleNumber') }}
+              </p>
+            </div>
+
+            <!-- Device Type -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Device Type <code class="tw-text-red-500">*</code>
+              </label>
+              <ng-select formControlName="deviceType" 
+                         placeholder="Select device type"
+                         [class.tw-border-red-500]="isFieldInvalid('deviceType')">
+                <ng-option *ngFor="let device of deviceTypes" [value]="device">
+                  {{device}}
+                </ng-option>
+              </ng-select>
+              <p *ngIf="isFieldInvalid('deviceType')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('deviceType') }}
+              </p>
+            </div>
+
+            <!-- Station -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Station <code class="tw-text-red-500">*</code>
+              </label>
+              <ng-select formControlName="stationId" 
+                         placeholder="Select station"
+                         [class.tw-border-red-500]="isFieldInvalid('stationId')">
+                <ng-option *ngFor="let station of allStations" [value]="station._id">
+                  {{station.name}} ({{station.code}})
+                </ng-option>
+              </ng-select>
+              <p *ngIf="isFieldInvalid('stationId')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+                {{ getFieldError('stationId') }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Address (Full Width) -->
+          <div>
+            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+              Address <code class="tw-text-red-500">*</code>
+            </label>
+            <textarea formControlName="address" 
+                      rows="3" 
+                      placeholder="Enter full address"
+                      class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 tw-resize-none"
+                      [class.tw-border-red-500]="isFieldInvalid('address')"></textarea>
+            <p *ngIf="isFieldInvalid('address')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+              {{ getFieldError('address') }}
+            </p>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-p-4 sm:tw-p-6 tw-border-t tw-bg-gray-50 tw-gap-3">
+        <div class="tw-text-sm tw-text-gray-600">
+          <i class="ph ph-info tw-mr-1"></i>
+          All fields marked with <code class="tw-text-red-500">*</code> are required
+        </div>
+        <div class="tw-flex tw-gap-3 tw-w-full sm:tw-w-auto">
+          <button type="button" 
+                  (click)="cancelForm()"
+                  class="tw-flex-1 sm:tw-flex-none tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-font-medium tw-py-2 tw-px-4 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <i class="ph ph-x tw-text-sm"></i>
+            Cancel
+          </button>
+          <button type="button" 
+                  (click)="onSubmit()" 
+                  [disabled]="collieForm.invalid || (!selectedFile && !capturedImageUrl) || isLoading"
+class="tw-flex-1 sm:tw-flex-none tw-bg-blue-600 hover:tw-bg-blue-700 disabled:tw-bg-blue-300 disabled:tw-cursor-not-allowed tw-text-white tw-font-medium tw-py-2 tw-px-6 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2 tw-min-w-[150px]">
+            <i *ngIf="!isLoading" class="ph ph-check tw-text-sm"></i>
+            <div *ngIf="isLoading"
+                 class="tw-animate-spin tw-rounded-full tw-h-4 tw-w-4 tw-border-b-2 tw-border-white"></div>
+            <span>{{ isLoading ? 'Registering...' : 'Register Collie' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div *ngIf="mode === 'preview' && currentCollie" 
+       class="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50 tw-p-4">
+    <div class="tw-bg-white tw-rounded-lg tw-shadow-xl tw-w-full tw-max-w-2xl tw-max-h-[95vh] tw-overflow-hidden">
+      <div class="tw-flex tw-items-center tw-justify-between tw-p-4 sm:tw-p-6 tw-border-b tw-bg-green-50">
+        <div>
+          <h3 class="tw-text-lg sm:tw-text-xl tw-font-bold tw-text-green-900">Collie Details</h3>
+          <p class="tw-text-sm tw-text-green-700">Complete collie registration information</p>
+        </div>
+        <button (click)="cancelForm()" 
+                class="tw-text-gray-400 hover:tw-text-gray-600 tw-text-xl sm:tw-text-2xl tw-transition-colors tw-p-1">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <div class="tw-p-4 sm:tw-p-6 tw-overflow-y-auto tw-max-h-[calc(95vh-12rem)]">
+        <!-- Profile Header -->
+        <div class="tw-text-center tw-mb-6">
+          <img [src]="getCollieImage(currentCollie)" 
+               [alt]="currentCollie.name"
+               class="tw-w-24 tw-h-24 sm:tw-w-32 sm:tw-h-32 tw-rounded-full tw-object-cover tw-mx-auto tw-border-4 tw-border-gray-200">
+          <h4 class="tw-text-xl sm:tw-text-2xl tw-font-semibold tw-text-gray-900 tw-mt-3">
+            {{ currentCollie.name }}
+          </h4>
+          <span [class]="'tw-inline-flex tw-px-3 tw-py-1 tw-text-sm tw-font-semibold tw-rounded-full tw-mt-2 ' + getApprovalStatusClass()">
+            {{ getApprovalStatusText() }}
+          </span>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="tw-space-y-4">
+          <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Mobile Number</label>
+              <p class="tw-text-sm tw-text-gray-900 tw-font-medium">{{ currentCollie.mobileNo }}</p>
+            </div>
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Email</label>
+              <p class="tw-text-sm tw-text-gray-900 tw-break-all">{{ currentCollie.emailId || 'N/A' }}</p>
+            </div>
+          </div>
+
+          <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Age</label>
+              <p class="tw-text-sm tw-text-gray-900">{{ currentCollie.age }} years</p>
+            </div>
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Gender</label>
+              <p class="tw-text-sm tw-text-gray-900">{{ currentCollie.gender }}</p>
+            </div>
+          </div>
+
+          <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Buckle Number</label>
+              <p class="tw-text-sm tw-text-gray-900">
+                <span class="tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full tw-bg-purple-100 tw-text-purple-800">
+                  {{ currentCollie.buckleNumber }}
+                </span>
+              </p>
+            </div>
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Device Type</label>
+              <p class="tw-text-sm tw-text-gray-900">{{ currentCollie.deviceType }}</p>
+            </div>
+          </div>
+
+          <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Station Name</label>
+              <p class="tw-text-sm tw-text-gray-900 tw-font-medium">{{ getStationName(currentCollie.stationId) }}</p>
+            </div>
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Station Code</label>
+              <p class="tw-text-sm tw-text-gray-900">{{ getStationCode(currentCollie.stationId) }}</p>
+            </div>
+          </div>
+
+          <div>
+            <label class="tw-text-sm tw-font-medium tw-text-gray-500">Address</label>
+            <p class="tw-text-sm tw-text-gray-900">{{ currentCollie.address }}</p>
+          </div>
+
+          <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Registration Date</label>
+              <p class="tw-text-sm tw-text-gray-900">{{ formatDate(currentCollie.createdAt) }}</p>
+            </div>
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Collie ID</label>
+              <p class="tw-text-sm tw-text-gray-900 tw-font-mono tw-break-all">{{ currentCollie._id }}</p>
+            </div>
+          </div>
+
+          <!-- Rate Card Information -->
+          <div class="tw-border-t tw-pt-4">
+            <h5 class="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3">Rate Card</h5>
+            <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-3 tw-gap-4">
+              <div class="tw-bg-blue-50 tw-p-3 tw-rounded-md">
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Base Rate</label>
+                <p class="tw-text-lg tw-font-bold tw-text-blue-900">₹{{ currentCollie.rateCard.baseRate }}</p>
+              </div>
+              <div class="tw-bg-green-50 tw-p-3 tw-rounded-md">
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Base Time</label>
+                <p class="tw-text-lg tw-font-bold tw-text-green-900">{{ currentCollie.rateCard.baseTime }} mins</p>
+              </div>
+              <div class="tw-bg-orange-50 tw-p-3 tw-rounded-md">
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Waiting Rate</label>
+                <p class="tw-text-lg tw-font-bold tw-text-orange-900">₹{{ currentCollie.rateCard.waitingRate }}/min</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Metrics -->
+          <div class="tw-border-t tw-pt-4">
+            <h5 class="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3">Performance Metrics</h5>
+            <div class="tw-grid tw-grid-cols-2 sm:tw-grid-cols-4 tw-gap-4">
+              <div class="tw-bg-gray-50 tw-p-3 tw-rounded-md tw-text-center">
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500 tw-block tw-mb-1">Rating</label>
+                <p class="tw-text-lg tw-font-bold tw-text-gray-900">
+                  <i class="ph ph-star-fill tw-text-yellow-500"></i>
+                  {{ currentCollie.rating || 0 }}
+                </p>
+              </div>
+              <div class="tw-bg-gray-50 tw-p-3 tw-rounded-md tw-text-center">
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500 tw-block tw-mb-1">Total Ratings</label>
+                <p class="tw-text-lg tw-font-bold tw-text-gray-900">{{ currentCollie.totalRatings || 0 }}</p>
+              </div>
+              <div class="tw-bg-gray-50 tw-p-3 tw-rounded-md tw-text-center">
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500 tw-block tw-mb-1">Completed</label>
+                <p class="tw-text-lg tw-font-bold tw-text-green-600">{{ currentCollie.completedBookings || 0 }}</p>
+              </div>
+              <div class="tw-bg-gray-50 tw-p-3 tw-rounded-md tw-text-center">
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500 tw-block tw-mb-1">Rejected</label>
+                <p class="tw-text-lg tw-font-bold tw-text-red-600">{{ currentCollie.rejectedBookings || 0 }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Information -->
+          <div class="tw-border-t tw-pt-4">
+            <h5 class="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3">Additional Information</h5>
+            <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Approved Status</label>
+                <p class="tw-text-sm tw-text-gray-900">
+                  <span [class]="currentCollie.isApproved ? 'tw-text-green-600' : 'tw-text-yellow-600'">
+                    {{ currentCollie.isApproved ? '✓ Approved' : '⏳ Pending Approval' }}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Active Status</label>
+                <p class="tw-text-sm tw-text-gray-900">
+                  <span [class]="currentCollie.isActive ? 'tw-text-green-600' : 'tw-text-red-600'">
+                    {{ currentCollie.isActive ? '✓ Active' : '✗ Inactive' }}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Logged In</label>
+                <p class="tw-text-sm tw-text-gray-900">
+                  <span [class]="currentCollie.isLoggedIn ? 'tw-text-green-600' : 'tw-text-gray-600'">
+                    {{ currentCollie.isLoggedIn ? '✓ Yes' : '✗ No' }}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Last Login</label>
+                <p class="tw-text-sm tw-text-gray-900">{{ formatDate(currentCollie.lastLoginTime) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Face Registration Info -->
+          <div *ngIf="currentCollie.faceEmbeddingId" class="tw-border-t tw-pt-4">
+            <h5 class="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3">Face Recognition</h5>
+            <div class="tw-bg-blue-50 tw-p-4 tw-rounded-md tw-flex tw-items-center tw-gap-3">
+              <i class="ph ph-identification-card tw-text-3xl tw-text-blue-600"></i>
+              <div>
+                <p class="tw-text-sm tw-font-medium tw-text-blue-900">Face Registered</p>
+                <p class="tw-text-xs tw-text-blue-700 tw-break-all">ID: {{ currentCollie.faceEmbeddingId }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="tw-flex tw-flex-col sm:tw-flex-row tw-justify-end tw-items-center tw-p-4 sm:tw-p-6 tw-border-t tw-bg-gray-50 tw-gap-3">
+        <div class="tw-flex tw-gap-3 tw-w-full sm:tw-w-auto">
+          <button (click)="cancelForm()"
+                  class="tw-flex-1 sm:tw-flex-none tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <i class="ph ph-x"></i>
+            Close
+          </button>
+          <button *ngIf="!currentCollie.isApproved"
+                  (click)="approveCollie(currentCollie._id!)"
+                  class="tw-flex-1 sm:tw-flex-none tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-6 tw-py-2 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <i class="ph ph-check-circle"></i>
+            Approve Collie
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>

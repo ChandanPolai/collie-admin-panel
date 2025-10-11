@@ -1,0 +1,23 @@
+// Custom styles if needed
+.collie-register-component {
+  // Add any custom styles here
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .tw-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Loading spinner animation
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Smooth transitions
+* {
+  transition: all 0.2s ease-in-out;
+}
