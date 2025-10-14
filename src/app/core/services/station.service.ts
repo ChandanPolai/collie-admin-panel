@@ -35,6 +35,35 @@ export class StationService {
   }
 
   /**
+   * Update geofence for a station (circle or polygon)
+   */
+  updateStationGeofence(payload: {
+    stationId: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    geofenceRadius?: number | null;
+    geofencePolygon?: number[][][] | null;
+    geofenceType: 'circle' | 'polygon';
+  }): Observable<StationResponse> {
+    return this.apiManager.post(apiEndpoints.UPDATE_STATION_GEOFENCE, payload);
+  }
+
+  /**
+   * Get geofence details for a station
+   */
+  getStationGeofence(stationId: string): Observable<StationResponse> {
+    const url = apiEndpoints.GET_STATION_GEOFENCE.replace(':stationId', stationId);
+    return this.apiManager.get(url);
+  }
+
+  /**
+   * Delete/reset geofence for a station
+   */
+  deleteStationGeofence(stationId: string): Observable<StationResponse> {
+    return this.apiManager.post(apiEndpoints.DELETE_STATION_GEOFENCE, { stationId });
+  }
+
+  /**
    * Helper method to validate station code format
    * @param code - Station code to validate
    * @returns boolean

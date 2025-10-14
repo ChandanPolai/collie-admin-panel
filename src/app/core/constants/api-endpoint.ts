@@ -15,6 +15,11 @@ class ApiEndpoints {
   public CREATE_STATION: string = `${this.PATH}/createStation`;
   public GET_ALL_STATION: string = `${this.PATH}/getAllStation`;
 
+  // Station geofence routes
+  public UPDATE_STATION_GEOFENCE: string = `${this.PATH}/updateStationGeofence`;
+  public GET_STATION_GEOFENCE: string = `${this.PATH}/getStationGeofence/:stationId`;
+  public DELETE_STATION_GEOFENCE: string = `${this.PATH}/deleteStationGeofence`;
+
   // State routes
 public GET_STATES: string = `${this.PATH}/getStates`;
 public GET_STATE_BY_ID: string = `${this.PATH}/states/:id`;

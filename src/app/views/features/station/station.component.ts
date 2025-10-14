@@ -362,7 +362,9 @@
 // }
 
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
+import * as L from 'leaflet';
+import 'leaflet-draw';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -388,7 +390,7 @@ import { SidebarService } from '../../../core/services/sidebar.service';
   templateUrl: './station.component.html',
   styleUrls: ['./station.component.scss']
 })
-export class StationComponent implements OnInit {
+export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
   mode: 'list' | 'create' | 'edit' | 'preview' = 'list';
   stations: Station[] = [];
   filteredStations: Station[] = [];
@@ -431,6 +433,22 @@ export class StationComponent implements OnInit {
     });
   }
 
+  ngAfterViewInit(): void {
+    if (this.isPolygonType()) {
+      this.initializeMap();
+    }
+    // initialize map when user switches to polygon type
+    this.stationForm.get('geofenceType')?.valueChanges.subscribe((type) => {
+      if (type === 'polygon') {
+        setTimeout(() => this.initializeMap(), 0);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroyMap();
+  }
+
   private initializeForm(): void {
     this.stationForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
@@ -441,6 +459,7 @@ export class StationComponent implements OnInit {
       longitude: ['', [Validators.pattern(/^-?((1[0-7][0-9])|([0-9]?[0-9]))(\.[0-9]{1,10})?$/)]],
       geofenceRadius: [500, [Validators.min(50), Validators.max(5000)]],
       geofenceType: ['circle', Validators.required],
+      geofencePolygonText: [''], // retained for internal storage if needed
       isActive: [true]
     });
 
@@ -530,8 +549,20 @@ export class StationComponent implements OnInit {
       longitude: station.longitude || '',
       geofenceRadius: station.geofenceRadius || 500,
       geofenceType: station.geofenceConfig?.geofenceType || 'circle',
+      geofencePolygonText: this.stringifyPolygon(station.geofencePolygon),
       isActive: station.isActive ?? true
     });
+
+    if (station.geofenceConfig?.geofenceType === 'polygon') {
+      setTimeout(() => {
+        this.initializeMap();
+        if (station.geofencePolygon) {
+          this.drawExistingPolygonOnMap(station.geofencePolygon);
+        }
+      }, 0);
+    } else {
+      this.destroyMap();
+    }
   }
 
   previewStation(station: Station): void {
@@ -571,9 +602,65 @@ export class StationComponent implements OnInit {
           }
         });
       } else if (this.mode === 'edit' && this.currentStationId) {
-        // Since updateStation is not available in StationService, show a message
-        swalHelper.showToast('Update functionality is not implemented', 'info');
-        this.isLoading = false;
+        const geofenceType: 'circle' | 'polygon' = this.stationForm.get('geofenceType')?.value;
+
+        if (geofenceType === 'circle') {
+          const lat = this.parseCoordinate(formValue.latitude);
+          const lng = this.parseCoordinate(formValue.longitude);
+          const radius = Number(formValue.geofenceRadius) || null;
+
+          if (lat === null || lng === null || !radius) {
+            this.isLoading = false;
+            swalHelper.messageToast('Latitude, longitude and geofence radius are required for circle geofence.', 'warning');
+            return;
+          }
+
+          this.stationService.updateStationGeofence({
+            stationId: this.currentStationId,
+            latitude: lat,
+            longitude: lng,
+            geofenceRadius: radius,
+            geofencePolygon: null,
+            geofenceType: 'circle'
+          }).subscribe({
+            next: (response) => {
+              swalHelper.showToast(response.message || 'Station geofence updated successfully', 'success');
+              this.isLoading = false;
+              this.loadStations();
+              this.mode = 'list';
+            },
+            error: (err) => {
+              swalHelper.messageToast(err?.message ?? 'Failed to update geofence.', 'error');
+              this.isLoading = false;
+            }
+          });
+        } else {
+          const parsedPolygon = this.currentDrawnPolygon || this.parsePolygonText(this.stationForm.get('geofencePolygonText')?.value || '');
+          if (!parsedPolygon) {
+            this.isLoading = false;
+            swalHelper.messageToast('Please draw a polygon on the map.', 'warning');
+            return;
+          }
+          this.stationService.updateStationGeofence({
+            stationId: this.currentStationId,
+            latitude: null,
+            longitude: null,
+            geofenceRadius: null,
+            geofencePolygon: parsedPolygon,
+            geofenceType: 'polygon'
+          }).subscribe({
+            next: (response) => {
+              swalHelper.showToast(response.message || 'Station geofence updated successfully', 'success');
+              this.isLoading = false;
+              this.loadStations();
+              this.mode = 'list';
+            },
+            error: (err) => {
+              swalHelper.messageToast(err?.message ?? 'Failed to update geofence.', 'error');
+              this.isLoading = false;
+            }
+          });
+        }
       }
     } else {
       this.markAllFieldsAsTouched();
@@ -715,5 +802,160 @@ export class StationComponent implements OnInit {
   getCityName(cityId: string): string {
     const city = this.cities.find(c => c._id === cityId);
     return city ? city.name : 'Unknown City';
+  }
+
+  private parsePolygonText(text: string): number[][][] | null {
+    try {
+      const parsed = JSON.parse(text);
+      if (
+        Array.isArray(parsed) &&
+        parsed.every((ring: any) =>
+          Array.isArray(ring) &&
+          ring.length >= 3 &&
+          ring.every((coord: any) =>
+            Array.isArray(coord) && coord.length === 2 &&
+            typeof coord[0] === 'number' && typeof coord[1] === 'number')
+        )
+      ) {
+        return parsed as number[][][];
+      }
+    } catch {}
+    return null;
+  }
+
+  private stringifyPolygon(polygon: number[][][] | null | undefined): string {
+    if (!polygon) return '';
+    try {
+      return JSON.stringify(polygon);
+    } catch {
+      return '';
+    }
+  }
+
+  isCircleType(): boolean {
+    const control = this.stationForm?.get('geofenceType');
+    return (control?.value as string) === 'circle';
+  }
+
+  isPolygonType(): boolean {
+    const control = this.stationForm?.get('geofenceType');
+    return (control?.value as string) === 'polygon';
+  }
+
+  // Leaflet map handling
+  private mapInstance: any | null = null;
+  private drawControl: any | null = null;
+  private drawnItems: any | null = null;
+  private currentDrawnPolygon: number[][][] | null = null;
+
+  private initializeMap(): void {
+    try {
+      if (this.mapInstance) {
+        this.mapInstance.invalidateSize();
+        return;
+      }
+      // Lazy-load Leaflet scripts only if available via global (Angular CLI handles CSS)
+      // Create map
+      this.mapInstance = L.map('geofenceMap', {
+        center: [21.1702, 72.8311],
+        zoom: 12
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(this.mapInstance);
+
+      this.drawnItems = new L.FeatureGroup();
+      this.mapInstance.addLayer(this.drawnItems);
+
+      const LA: any = L as any;
+      this.drawControl = new LA.Control.Draw({
+        draw: {
+          polygon: {
+            allowIntersection: false,
+            showArea: true
+          },
+          polyline: false,
+          rectangle: false,
+          circle: false,
+          marker: false,
+          circlemarker: false
+        },
+        edit: {
+          featureGroup: this.drawnItems,
+          remove: true
+        }
+      });
+      this.mapInstance.addControl(this.drawControl);
+
+      this.mapInstance.on((L as any).Draw.Event.CREATED, (e: any) => {
+        const layer = e.layer;
+        this.drawnItems.clearLayers();
+        this.drawnItems.addLayer(layer);
+        this.currentDrawnPolygon = this.layerToPolygon(layer);
+        this.stationForm.get('geofencePolygonText')?.setValue(this.stringifyPolygon(this.currentDrawnPolygon));
+      });
+
+      this.mapInstance.on((L as any).Draw.Event.EDITED, (e: any) => {
+        const layers = e.layers;
+        layers.eachLayer((layer: any) => {
+          this.currentDrawnPolygon = this.layerToPolygon(layer);
+          this.stationForm.get('geofencePolygonText')?.setValue(this.stringifyPolygon(this.currentDrawnPolygon));
+        });
+      });
+
+      this.mapInstance.on((L as any).Draw.Event.DELETED, () => {
+        this.currentDrawnPolygon = null;
+        this.stationForm.get('geofencePolygonText')?.setValue('');
+      });
+    } catch (err) {
+      // no-op; if leaflet isn't loaded, we silently ignore to avoid runtime crash
+    }
+  }
+
+  private destroyMap(): void {
+    try {
+      if (this.mapInstance) {
+        this.mapInstance.remove();
+      }
+    } catch {}
+    this.mapInstance = null;
+    this.drawControl = null;
+    this.drawnItems = null;
+    this.currentDrawnPolygon = null;
+  }
+
+  private drawExistingPolygonOnMap(polygon: number[][][]): void {
+    if (!this.mapInstance || !polygon?.[0]?.length) return;
+    const latlngs: [number, number][] = polygon[0].map(([lng, lat]) => [lat, lng]);
+    const layer = L.polygon(latlngs as unknown as any);
+    this.drawnItems.clearLayers();
+    this.drawnItems.addLayer(layer);
+    this.mapInstance.fitBounds(layer.getBounds(), { padding: [20, 20] });
+    this.currentDrawnPolygon = polygon;
+  }
+
+  clearPolygon(): void {
+    if (this.drawnItems) {
+      this.drawnItems.clearLayers();
+    }
+    this.currentDrawnPolygon = null;
+    this.stationForm.get('geofencePolygonText')?.setValue('');
+  }
+
+  private layerToPolygon(layer: any): number[][][] | null {
+    try {
+      if (!layer) return null;
+      const latlngs: any[] = layer.getLatLngs && layer.getLatLngs();
+      // Leaflet Polygon returns array of rings; take first ring
+      const firstRing: any[] = Array.isArray(latlngs) ? (Array.isArray(latlngs[0]) ? latlngs[0] : latlngs) : [];
+      if (!firstRing.length) return null;
+      const coords: number[][] = firstRing.map((pt: any) => [pt.lng, pt.lat]);
+      // Ensure closed polygon by repeating first point if needed
+      const isClosed = coords.length > 2 && coords[0][0] === coords[coords.length - 1][0] && coords[0][1] === coords[coords.length - 1][1];
+      if (!isClosed) coords.push([...coords[0]]);
+      return [coords];
+    } catch {
+      return null;
+    }
   }
 }

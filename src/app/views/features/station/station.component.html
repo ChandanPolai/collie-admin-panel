@@ -100,7 +100,7 @@
               </td>
               <td class="tw-px-4 tw-py-4">
                 <div class="tw-text-xs tw-text-gray-700">
-                  {{getGeofenceTypeLabel(station.geofenceConfig?.geofenceType)}}
+                  {{getGeofenceTypeLabel(station.geofenceConfig.geofenceType)}}
                 </div>
                 <div *ngIf="station.geofenceRadius" class="tw-text-xs tw-text-gray-500">
                   {{station.geofenceRadius}}m radius
@@ -304,7 +304,7 @@
             </div>
 
             <!-- Geofence Radius -->
-            <div *ngIf="stationForm.get('geofenceType')?.value === 'circle'">
+            <div *ngIf="isCircleType()">
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
                 Geofence Radius (meters)
               </label>
@@ -319,6 +319,18 @@
                 {{ getFieldError('geofenceRadius') }}
               </p>
               <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Range: 50m - 5000m</p>
+            </div>
+
+            <!-- Geofence Polygon (for Polygon Type) -->
+            <div *ngIf="isPolygonType()">
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                Draw Geofence Polygon on Map
+              </label>
+              <div id="geofenceMap" class="tw-w-full tw-rounded-md tw-border tw-border-gray-300" style="height: 360px;"></div>
+              <div class="tw-flex tw-items-center tw-justify-between tw-mt-2">
+                <p class="tw-text-xs tw-text-gray-500">Use the polygon tool to draw or edit the geofence. Double-click to finish.</p>
+                <button type="button" (click)="clearPolygon()" class="tw-text-xs tw-text-red-600 hover:tw-underline">Clear Polygon</button>
+              </div>
             </div>
 
             <!-- Active Status (Edit Mode Only) -->
@@ -498,7 +510,7 @@
               <div class="tw-bg-purple-50 tw-p-3 tw-rounded-md">
                 <label class="tw-text-xs tw-font-medium tw-text-gray-500">Geofence Type</label>
                 <p class="tw-text-sm tw-font-medium tw-text-purple-900">
-                  {{ getGeofenceTypeLabel(currentStation.geofenceConfig?.geofenceType) }}
+                  {{ getGeofenceTypeLabel(currentStation.geofenceConfig.geofenceType) }}
                 </p>
               </div>
               <div *ngIf="currentStation.geofenceRadius" class="tw-bg-purple-50 tw-p-3 tw-rounded-md">

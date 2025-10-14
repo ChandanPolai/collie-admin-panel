@@ -1,4 +1,6 @@
 @use "sass:color";
+@import "leaflet/dist/leaflet.css";
+@import "leaflet-draw/dist/leaflet.draw.css";
 $primary: #09af72;
 $save: #243a65;
 
