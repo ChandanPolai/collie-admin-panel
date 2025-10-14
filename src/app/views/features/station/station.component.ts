@@ -402,6 +402,9 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
   isSidebarCollapsed: boolean = false;
   
   stationForm!: FormGroup;
+  isPolygonModalOpen: boolean = false;
+  mapSearchQuery: string = '';
+  mapSearchLoading: boolean = false;
   
   searchTerm: string = '';
   paginationConfig = {
@@ -411,10 +414,6 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
     totalItems: 0
   };
 
-  geofenceTypes = [
-    { value: 'circle', label: 'Circle (Radius-based)' },
-    { value: 'polygon', label: 'Polygon (Custom Shape)' }
-  ];
 
   constructor(
     private fb: FormBuilder,
@@ -434,15 +433,7 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    if (this.isPolygonType()) {
-      this.initializeMap();
-    }
-    // initialize map when user switches to polygon type
-    this.stationForm.get('geofenceType')?.valueChanges.subscribe((type) => {
-      if (type === 'polygon') {
-        setTimeout(() => this.initializeMap(), 0);
-      }
-    });
+    // Map initializes when polygon modal opens
   }
 
   ngOnDestroy(): void {
@@ -457,18 +448,8 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
       address: [''],
       latitude: ['', [Validators.pattern(/^-?([0-8]?[0-9]|90)(\.[0-9]{1,10})?$/)]],
       longitude: ['', [Validators.pattern(/^-?((1[0-7][0-9])|([0-9]?[0-9]))(\.[0-9]{1,10})?$/)]],
-      geofenceRadius: [500, [Validators.min(50), Validators.max(5000)]],
-      geofenceType: ['circle', Validators.required],
-      geofencePolygonText: [''], // retained for internal storage if needed
+      geofencePolygonText: [''],
       isActive: [true]
-    });
-
-    this.stationForm.get('geofenceType')?.valueChanges.subscribe(type => {
-      if (type === 'circle') {
-        this.stationForm.get('geofenceRadius')?.enable();
-      } else {
-        this.stationForm.get('geofenceRadius')?.disable();
-      }
     });
   }
 
@@ -547,22 +528,10 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
       address: station.address || '',
       latitude: station.latitude || '',
       longitude: station.longitude || '',
-      geofenceRadius: station.geofenceRadius || 500,
-      geofenceType: station.geofenceConfig?.geofenceType || 'circle',
       geofencePolygonText: this.stringifyPolygon(station.geofencePolygon),
       isActive: station.isActive ?? true
     });
-
-    if (station.geofenceConfig?.geofenceType === 'polygon') {
-      setTimeout(() => {
-        this.initializeMap();
-        if (station.geofencePolygon) {
-          this.drawExistingPolygonOnMap(station.geofencePolygon);
-        }
-      }, 0);
-    } else {
-      this.destroyMap();
-    }
+    this.destroyMap();
   }
 
   previewStation(station: Station): void {
@@ -602,65 +571,31 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
           }
         });
       } else if (this.mode === 'edit' && this.currentStationId) {
-        const geofenceType: 'circle' | 'polygon' = this.stationForm.get('geofenceType')?.value;
-
-        if (geofenceType === 'circle') {
-          const lat = this.parseCoordinate(formValue.latitude);
-          const lng = this.parseCoordinate(formValue.longitude);
-          const radius = Number(formValue.geofenceRadius) || null;
-
-          if (lat === null || lng === null || !radius) {
-            this.isLoading = false;
-            swalHelper.messageToast('Latitude, longitude and geofence radius are required for circle geofence.', 'warning');
-            return;
-          }
-
-          this.stationService.updateStationGeofence({
-            stationId: this.currentStationId,
-            latitude: lat,
-            longitude: lng,
-            geofenceRadius: radius,
-            geofencePolygon: null,
-            geofenceType: 'circle'
-          }).subscribe({
-            next: (response) => {
-              swalHelper.showToast(response.message || 'Station geofence updated successfully', 'success');
-              this.isLoading = false;
-              this.loadStations();
-              this.mode = 'list';
-            },
-            error: (err) => {
-              swalHelper.messageToast(err?.message ?? 'Failed to update geofence.', 'error');
-              this.isLoading = false;
-            }
-          });
-        } else {
-          const parsedPolygon = this.currentDrawnPolygon || this.parsePolygonText(this.stationForm.get('geofencePolygonText')?.value || '');
-          if (!parsedPolygon) {
-            this.isLoading = false;
-            swalHelper.messageToast('Please draw a polygon on the map.', 'warning');
-            return;
-          }
-          this.stationService.updateStationGeofence({
-            stationId: this.currentStationId,
-            latitude: null,
-            longitude: null,
-            geofenceRadius: null,
-            geofencePolygon: parsedPolygon,
-            geofenceType: 'polygon'
-          }).subscribe({
-            next: (response) => {
-              swalHelper.showToast(response.message || 'Station geofence updated successfully', 'success');
-              this.isLoading = false;
-              this.loadStations();
-              this.mode = 'list';
-            },
-            error: (err) => {
-              swalHelper.messageToast(err?.message ?? 'Failed to update geofence.', 'error');
-              this.isLoading = false;
-            }
-          });
+        const parsedPolygon = this.currentDrawnPolygon || this.parsePolygonText(this.stationForm.get('geofencePolygonText')?.value || '');
+        if (!parsedPolygon) {
+          this.isLoading = false;
+          swalHelper.messageToast('Please draw a polygon on the map.', 'warning');
+          return;
         }
+        this.stationService.updateStationGeofence({
+          stationId: this.currentStationId,
+          latitude: null,
+          longitude: null,
+          geofenceRadius: null,
+          geofencePolygon: parsedPolygon,
+          geofenceType: 'polygon'
+        }).subscribe({
+          next: (response) => {
+            swalHelper.showToast(response.message || 'Station geofence updated successfully', 'success');
+            this.isLoading = false;
+            this.loadStations();
+            this.mode = 'list';
+          },
+          error: (err) => {
+            swalHelper.messageToast(err?.message ?? 'Failed to update geofence.', 'error');
+            this.isLoading = false;
+          }
+        });
       }
     } else {
       this.markAllFieldsAsTouched();
@@ -755,8 +690,7 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getGeofenceTypeLabel(type: string | undefined): string {
-    const geofence = this.geofenceTypes.find(g => g.value === type);
-    return geofence?.label || 'Circle';
+    return 'Polygon (Custom Shape)';
   }
 
   formatCoordinate(coord: number | null | undefined): string {
@@ -832,15 +766,7 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  isCircleType(): boolean {
-    const control = this.stationForm?.get('geofenceType');
-    return (control?.value as string) === 'circle';
-  }
-
-  isPolygonType(): boolean {
-    const control = this.stationForm?.get('geofenceType');
-    return (control?.value as string) === 'polygon';
-  }
+  // Polygon-only mode now
 
   // Leaflet map handling
   private mapInstance: any | null = null;
@@ -856,7 +782,7 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       // Lazy-load Leaflet scripts only if available via global (Angular CLI handles CSS)
       // Create map
-      this.mapInstance = L.map('geofenceMap', {
+      this.mapInstance = L.map('geofenceMapModal', {
         center: [21.1702, 72.8311],
         zoom: 12
       });
@@ -956,6 +882,56 @@ export class StationComponent implements OnInit, AfterViewInit, OnDestroy {
       return [coords];
     } catch {
       return null;
+    }
+  }
+
+  openPolygonModal(): void {
+    this.isPolygonModalOpen = true;
+    setTimeout(() => {
+      this.initializeMap();
+      // If existing polygon present, draw it
+      const existing = this.parsePolygonText(this.stationForm.get('geofencePolygonText')?.value || '');
+      if (existing) {
+        this.drawExistingPolygonOnMap(existing);
+      }
+    }, 0);
+  }
+
+  closePolygonModal(): void {
+    this.isPolygonModalOpen = false;
+    this.destroyMap();
+  }
+
+  savePolygonAndClose(): void {
+    if (!this.currentDrawnPolygon) {
+      swalHelper.messageToast('Please draw a polygon before saving.', 'warning');
+      return;
+    }
+    this.stationForm.get('geofencePolygonText')?.setValue(this.stringifyPolygon(this.currentDrawnPolygon));
+    this.closePolygonModal();
+  }
+
+  async searchLocation(): Promise<void> {
+    if (!this.mapSearchQuery?.trim()) return;
+    this.mapSearchLoading = true;
+    try {
+      const q = encodeURIComponent(this.mapSearchQuery.trim());
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const item = data[0];
+        const lat = parseFloat(item.lat);
+        const lon = parseFloat(item.lon);
+        if (this.mapInstance && !Number.isNaN(lat) && !Number.isNaN(lon)) {
+          this.mapInstance.setView([lat, lon], 14);
+        }
+      } else {
+        swalHelper.messageToast('Location not found. Try a different search.', 'info');
+      }
+    } catch {
+      swalHelper.messageToast('Search failed. Check your connection.', 'error');
+    } finally {
+      this.mapSearchLoading = false;
     }
   }
 }

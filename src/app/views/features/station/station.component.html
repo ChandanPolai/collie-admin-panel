@@ -100,10 +100,7 @@
               </td>
               <td class="tw-px-4 tw-py-4">
                 <div class="tw-text-xs tw-text-gray-700">
-                  {{getGeofenceTypeLabel(station.geofenceConfig.geofenceType)}}
-                </div>
-                <div *ngIf="station.geofenceRadius" class="tw-text-xs tw-text-gray-500">
-                  {{station.geofenceRadius}}m radius
+                  Polygon (Custom Shape)
                 </div>
               </td>
               <td class="tw-px-4 tw-py-4">
@@ -256,20 +253,23 @@
               </p>
             </div>
 
-            <!-- Geofence Type -->
+            <!-- Geofence Polygon Trigger -->
             <div>
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Geofence Type <code class="tw-text-red-500">*</code>
+                Geofence Polygon <code class="tw-text-red-500">*</code>
               </label>
-              <ng-select formControlName="geofenceType" 
-                         placeholder="Select geofence type"
-                         [class.tw-border-red-500]="isFieldInvalid('geofenceType')">
-                <ng-option *ngFor="let type of geofenceTypes" [value]="type.value">
-                  {{type.label}}
-                </ng-option>
-              </ng-select>
-              <p *ngIf="isFieldInvalid('geofenceType')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('geofenceType') }}
+              <div class="tw-flex tw-gap-2">
+                <button type="button" (click)="openPolygonModal()"
+                        class="tw-flex-1 tw-bg-purple-600 hover:tw-bg-purple-700 tw-text-white tw-font-medium tw-py-2 tw-px-4 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+                  <i class="ph ph-polygon"></i>
+                  Draw / Edit Polygon
+                </button>
+              </div>
+              <p class="tw-text-xs tw-text-gray-500 tw-mt-2" *ngIf="stationForm.get('geofencePolygonText')?.value">
+                Polygon selected
+              </p>
+              <p class="tw-text-xs tw-text-red-600 tw-mt-2" *ngIf="!stationForm.get('geofencePolygonText')?.value">
+                No polygon selected yet
               </p>
             </div>
 
@@ -303,35 +303,7 @@
               </p>
             </div>
 
-            <!-- Geofence Radius -->
-            <div *ngIf="isCircleType()">
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Geofence Radius (meters)
-              </label>
-              <input formControlName="geofenceRadius" 
-                     type="number" 
-                     placeholder="500"
-                     min="50"
-                     max="5000"
-                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
-                     [class.tw-border-red-500]="isFieldInvalid('geofenceRadius')">
-              <p *ngIf="isFieldInvalid('geofenceRadius')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('geofenceRadius') }}
-              </p>
-              <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Range: 50m - 5000m</p>
-            </div>
-
-            <!-- Geofence Polygon (for Polygon Type) -->
-            <div *ngIf="isPolygonType()">
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Draw Geofence Polygon on Map
-              </label>
-              <div id="geofenceMap" class="tw-w-full tw-rounded-md tw-border tw-border-gray-300" style="height: 360px;"></div>
-              <div class="tw-flex tw-items-center tw-justify-between tw-mt-2">
-                <p class="tw-text-xs tw-text-gray-500">Use the polygon tool to draw or edit the geofence. Double-click to finish.</p>
-                <button type="button" (click)="clearPolygon()" class="tw-text-xs tw-text-red-600 hover:tw-underline">Clear Polygon</button>
-              </div>
-            </div>
+            <!-- Removed inline map/radius for polygon-only with modal -->
 
             <!-- Active Status (Edit Mode Only) -->
             <div *ngIf="mode === 'edit'" class="tw-flex tw-items-center tw-pt-6">
@@ -591,6 +563,36 @@
             <i class="ph ph-pencil"></i>
             Edit Station
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Polygon Map Modal -->
+  <div *ngIf="isPolygonModalOpen" class="tw-fixed tw-inset-0 tw-z-[60] tw-bg-black tw-bg-opacity-60 tw-flex tw-flex-col">
+    <div class="tw-bg-white tw-w-full tw-max-w-5xl tw-mx-auto tw-my-auto tw-rounded-lg tw-overflow-hidden tw-shadow-2xl">
+      <div class="tw-flex tw-items-center tw-justify-between tw-px-4 tw-py-3 tw-bg-purple-600">
+        <div class="tw-flex tw-items-center tw-gap-2">
+          <i class="ph ph-polygon tw-text-white"></i>
+          <h4 class="tw-text-white tw-font-semibold">Draw Geofence Polygon</h4>
+        </div>
+        <button (click)="closePolygonModal()" class="tw-text-white tw-text-2xl">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <div class="tw-p-4 tw-space-y-3">
+        <div class="tw-flex tw-gap-2">
+          <input [(ngModel)]="mapSearchQuery" (keyup.enter)="searchLocation()" type="text" placeholder="Search location (city, address, landmark)" class="tw-flex-1 tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md">
+          <button (click)="searchLocation()" [disabled]="mapSearchLoading" class="tw-bg-gray-800 hover:tw-bg-black disabled:tw-bg-gray-400 tw-text-white tw-px-4 tw-rounded-md">
+            <span *ngIf="!mapSearchLoading">Search</span>
+            <span *ngIf="mapSearchLoading">Searching...</span>
+          </button>
+          <button (click)="clearPolygon()" class="tw-bg-red-600 hover:tw-bg-red-700 tw-text-white tw-px-4 tw-rounded-md">Clear</button>
+        </div>
+        <div id="geofenceMapModal" class="tw-w-full tw-border tw-border-gray-300 tw-rounded-md" style="height: 70vh;"></div>
+        <div class="tw-flex tw-justify-end tw-gap-2">
+          <button (click)="closePolygonModal()" class="tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md">Cancel</button>
+          <button (click)="savePolygonAndClose()" class="tw-bg-purple-600 hover:tw-bg-purple-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md">Save Polygon</button>
         </div>
       </div>
     </div>
