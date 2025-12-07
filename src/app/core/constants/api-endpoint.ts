@@ -28,6 +28,9 @@ public UPDATE_STATE: string = `${this.PATH}/updateStates/:id`;
 public TOGGLE_STATE_STATUS: string = `${this.PATH}/staus/:toggle-status`;
 public DELETE_STATE: string = `${this.PATH}/states/:id`;
 
+
+
+
 // City routes
 public GET_CITIES: string = `${this.PATH}/getCities`;
 public GET_CITY_BY_ID: string = `${this.PATH}/cities/`;
@@ -195,6 +198,11 @@ public DASHBOARD: string = `${this.PATH}/dashboardCount`;
     public LIST_PROJECT_BID: string = `${this.PATH}/list-bids`;
     public UPDATE_BID_STATUS: string = `${this.PATH}/update-bid-status`;
     public UPDATE_PROJECT_STATUS: string = `${this.PATH}/update-project-status`;
+
+    public PLATFORM_CREATE_FOR_STATION: string = `${this.PATH}/createPlatformsForStation`;
+public PLATFORM_GET_BY_STATION: string = `${this.PATH}/getPlatformsByStation/:stationId`;
+public PLATFORM_UPDATE: string = `${this.PATH}/updatePlatform/:id`;
+public GET_ALL_BOOKING_HISTORY= `${this.PATH}/GET_ALL_BOOKING_HISTORY`
 
 }
 

@@ -20,7 +20,8 @@ import { CollieRegisterComponent } from './views/features/collie-register/collie
 import { StationComponent } from './views/features/station/station.component';
 import { CityComponent } from './views/features/city/city.component';
 import { StateComponent } from './views/features/state/state.component';
-
+import  {PlatformComponent} from './views/features/platform/platform.component';
+import { BookingHistoryComponent } from './views/features/bookings/booking.component';
 export const routes: Routes = [
   {
     path: '',
@@ -62,7 +63,11 @@ export const routes: Routes = [
         // { path: 'collie-register', component: CollieRegisterComponent }
         { path: 'station', component: StationComponent },
          { path: 'city', component: CityComponent },
-        { path: 'state', component: StateComponent }
+        { path: 'state', component: StateComponent },
+        { path:'platform', component: PlatformComponent},
+        {path:'booking', component: BookingHistoryComponent  }
+
+
 
 
 

@@ -1,0 +1,398 @@
+<main [class]="'tw-pt-4 tw-pb-4 tw-transition-all tw-duration-300 tw-overflow-auto ' + (isSidebarCollapsed ? ' tw-ml-16' : ' tw-ml-64')">
+  
+  <!-- List View -->
+  <div *ngIf="mode === 'list'" class="tw-p-4 md:tw-p-7">
+    <div class="tw-flex tw-flex-col sm:tw-flex-row tw-items-start sm:tw-items-center tw-justify-between tw-mb-4 tw-gap-3">
+      <h2 class="tw-text-xl tw-font-bold tw-text-gray-900 tw-uppercase">Platforms Management</h2>
+      <div class="tw-flex tw-gap-2">
+        <button (click)="loadPlatforms()" [disabled]="isLoading || !selectedStationId"
+                class="tw-bg-gray-600 hover:tw-bg-gray-700 disabled:tw-bg-gray-400 tw-text-white tw-px-3 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-gap-2">
+          <i [class]="isLoading ? 'ph ph-spinner tw-animate-spin' : 'ph ph-arrow-clockwise'"></i>
+          <span class="tw-hidden sm:tw-inline">Refresh</span>
+        </button>
+        <button (click)="createNew()" 
+                class="tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-gap-2">
+          <i class="ph ph-plus"></i>
+          <span class="tw-hidden sm:tw-inline">Create Platforms</span>
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="selectedStationId" class="tw-mb-4">
+      <h3 class="tw-text-lg tw-font-semibold tw-text-gray-800">Platforms for {{getStationName(selectedStationId)}}</h3>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="tw-flex tw-flex-col sm:tw-flex-row tw-items-end tw-gap-4 tw-mb-6">
+      <div class="tw-flex-1 tw-w-full">
+        <small class="tw-font-semibold tw-block tw-mb-1">Select Station</small>
+        <ng-select [(ngModel)]="selectedStationId"
+                   (ngModelChange)="onStationChange()"
+                   placeholder="Select a station to view platforms"
+                   [clearable]="true"
+                   [searchable]="true">
+          <ng-option *ngFor="let station of allStations" [value]="station._id">
+            {{station.name}} ({{station.code}})
+          </ng-option>
+        </ng-select>
+      </div>
+      <div class="tw-flex-1 tw-w-full">
+        <small class="tw-font-semibold tw-block tw-mb-1">Search by Platform Number</small>
+        <input type="text" 
+               class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md" 
+               placeholder="Search platforms..." 
+               [(ngModel)]="searchTerm"
+               (input)="onSearch()">
+      </div>
+      <div class="tw-w-full sm:tw-w-44">
+        <small class="tw-font-semibold tw-block tw-mb-1">Page Size</small>
+        <ng-select [items]="[5,10,20,50]" 
+                   bindLabel="item" 
+                   bindValue="item"
+                   [(ngModel)]="paginationConfig.itemsPerPage" 
+                   (change)="onPageSizeChange()">
+          <ng-template ng-option-tmp let-item="item">{{item}} per page</ng-template>
+        </ng-select>
+      </div>
+      <button *ngIf="searchTerm" 
+              (click)="clearFilters()"
+              class="tw-w-full sm:tw-w-auto tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
+        <i class="ph ph-x"></i>
+        <span>Clear Search</span>
+      </button>
+    </div>
+
+    <div class="tw-bg-white tw-rounded-lg tw-shadow-md tw-overflow-hidden">
+      <!-- Desktop Table View -->
+      <div class="tw-hidden md:tw-block tw-overflow-x-auto">
+        <table class="tw-w-full tw-border-collapse">
+          <thead class="tw-bg-gray-50">
+            <tr>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">#</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Platform Number</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Status</th>
+              <th class="tw-px-4 tw-py-3 tw-text-left tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Created Date</th>
+              <th class="tw-px-4 tw-py-3 tw-text-center tw-text-xs tw-font-medium tw-text-gray-500 tw-uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="tw-divide-y tw-divide-gray-200">
+            <tr *ngIf="isLoading">
+              <td colspan="5" class="tw-px-4 tw-py-8 tw-text-center">
+                <div class="tw-animate-spin tw-rounded-full tw-h-8 tw-w-8 tw-border-b-2 tw-border-blue-600 tw-mx-auto"></div>
+              </td>
+            </tr>
+            <tr *ngFor="let platform of filteredPlatforms | paginate: paginationConfig; let i = index" 
+                class="hover:tw-bg-gray-50">
+              <td class="tw-px-4 tw-py-4 tw-text-sm">
+                {{(paginationConfig.currentPage-1)*paginationConfig.itemsPerPage+i+1}}
+              </td>
+              <td class="tw-px-4 tw-py-4">
+                <div class="tw-text-sm tw-font-medium tw-text-gray-900">Platform {{platform.platformNumber}}</div>
+              </td>
+              <td class="tw-px-4 tw-py-4">
+                <span (click)="togglePlatformStatus(platform)"
+                      [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full tw-cursor-pointer hover:tw-opacity-80 ' + getStatusClass(platform.isActive)"
+                      title="Click to toggle status">
+                  {{getStatusText(platform.isActive)}}
+                </span>
+              </td>
+              <td class="tw-px-4 tw-py-4 tw-text-sm tw-text-gray-500">
+                {{formatDate(platform.createdAt)}}
+              </td>
+              <td class="tw-px-4 tw-py-4 tw-text-center">
+                <div class="tw-flex tw-items-center tw-justify-center tw-gap-1">
+                  <button (click)="previewPlatform(platform)" 
+                          title="Preview" 
+                          class="tw-p-2 tw-text-green-600 hover:tw-bg-green-50 tw-rounded-md">
+                    <i class="ph ph-eye tw-text-lg"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="!isLoading && (!selectedStationId || filteredPlatforms.length === 0)">
+              <td colspan="5" class="tw-text-center tw-py-12">
+                <div *ngIf="!selectedStationId">
+                  <i class="ph ph-building-2 tw-text-6xl tw-text-gray-300"></i>
+                  <p class="tw-text-gray-500 tw-mt-4">Please select a station from the dropdown above to view its platforms</p>
+                </div>
+                <div *ngIf="selectedStationId && filteredPlatforms.length === 0">
+                  <i class="ph ph-train tw-text-6xl tw-text-gray-300"></i>
+                  <p class="tw-text-gray-500 tw-mt-4">No platforms found for this station</p>
+                  <button (click)="createNew()" 
+                          class="tw-mt-4 tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md">
+                    Create Platforms
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div class="md:tw-hidden">
+        <div *ngFor="let platform of filteredPlatforms | paginate: paginationConfig" 
+             class="tw-border-b tw-p-4">
+          <div class="tw-flex tw-items-start tw-gap-3">
+            <div class="tw-flex-shrink-0 tw-bg-blue-100 tw-p-3 tw-rounded-lg">
+              <i class="ph ph-train tw-text-2xl tw-text-blue-600"></i>
+            </div>
+            <div class="tw-flex-1">
+              <p class="tw-font-medium tw-text-gray-900">Platform {{platform.platformNumber}}</p>
+              <p class="tw-text-sm tw-text-gray-600">Station: {{getStationName(platform.stationId)}}</p>
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mt-1">
+                <span (click)="togglePlatformStatus(platform)"
+                      [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full tw-cursor-pointer hover:tw-opacity-80 ' + getStatusClass(platform.isActive)"
+                      title="Click to toggle status">
+                  {{getStatusText(platform.isActive)}}
+                </span>
+              </div>
+              <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Created: {{formatDate(platform.createdAt)}}</p>
+              <div class="tw-flex tw-gap-1 tw-mt-2">
+                <button (click)="previewPlatform(platform)" 
+                        class="tw-p-1.5 tw-text-green-600 hover:tw-bg-green-50 tw-rounded-md">
+                  <i class="ph ph-eye"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="!isLoading && (!selectedStationId || filteredPlatforms.length === 0)" 
+             class="tw-text-center tw-py-12">
+          <div *ngIf="!selectedStationId">
+            <i class="ph ph-building-2 tw-text-6xl tw-text-gray-300"></i>
+            <p class="tw-text-gray-500 tw-mt-4">Please select a station from the dropdown above to view its platforms</p>
+          </div>
+          <div *ngIf="selectedStationId && filteredPlatforms.length === 0">
+            <i class="ph ph-train tw-text-6xl tw-text-gray-300"></i>
+            <p class="tw-text-gray-500 tw-mt-4">No platforms found for this station</p>
+            <button (click)="createNew()" 
+                    class="tw-mt-4 tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md">
+              Create Platforms
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tw-mt-6 tw-flex tw-justify-center" *ngIf="filteredPlatforms.length > 0">
+      <pagination-controls [id]="'platform-pagination'" 
+                           (pageChange)="onPageChange($event)" 
+                           [maxSize]="5" 
+                           [directionLinks]="true" 
+                           previousLabel="Previous" 
+                           nextLabel="Next">
+      </pagination-controls>
+    </div>
+  </div>
+
+  <!-- Create Platforms Modal -->
+  <div *ngIf="mode === 'create'"
+       class="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50 tw-p-4">
+    <div class="tw-bg-white tw-rounded-lg tw-shadow-xl tw-w-full tw-max-w-lg tw-max-h-[95vh] tw-overflow-hidden">
+      <div class="tw-flex tw-items-center tw-justify-between tw-p-4 sm:tw-p-6 tw-border-b tw-bg-blue-50">
+        <div>
+          <h3 class="tw-text-lg sm:tw-text-xl tw-font-bold tw-text-blue-900">
+            Create Platforms
+          </h3>
+          <p class="tw-text-sm tw-text-blue-700">
+            Select station and number of platforms to create
+          </p>
+        </div>
+        <button (click)="cancelForm()" 
+                class="tw-text-gray-400 hover:tw-text-gray-600 tw-text-xl sm:tw-text-2xl tw-transition-colors tw-p-1">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <div class="tw-p-4 sm:tw-p-6 tw-overflow-y-auto tw-max-h-[75vh]">
+        <form [formGroup]="platformForm" (ngSubmit)="onSubmit()" class="tw-space-y-4">
+          
+          <!-- Station Selection -->
+          <div>
+            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+              Select Station <code class="tw-text-red-500">*</code>
+            </label>
+            <ng-select formControlName="stationId" 
+                       placeholder="Search and select station"
+                       [clearable]="false"
+                       [searchable]="true"
+                       notFoundText="No stations found"
+                       [class.tw-border-red-500]="isFieldInvalid('stationId')">
+              <ng-option *ngFor="let station of allStations" [value]="station._id">
+                <div class="tw-flex tw-items-center tw-justify-between">
+                  <span>{{station.name}}</span>
+                  <span class="tw-text-xs tw-bg-indigo-100 tw-text-indigo-800 tw-px-2 tw-py-0.5 tw-rounded-full tw-ml-2">{{station.code}}</span>
+                </div>
+              </ng-option>
+            </ng-select>
+            <p *ngIf="isFieldInvalid('stationId')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+              {{ getFieldError('stationId') }}
+            </p>
+          </div>
+
+          <!-- Number of Platforms -->
+          <div>
+            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+              Number of Platforms <code class="tw-text-red-500">*</code>
+            </label>
+            <input formControlName="platformNo" 
+                   type="number" 
+                   min="1"
+                   placeholder="e.g., 8"
+                   class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
+                   [class.tw-border-red-500]="isFieldInvalid('platformNo')">
+            <p *ngIf="isFieldInvalid('platformNo')" class="tw-text-red-500 tw-text-sm tw-mt-1">
+              {{ getFieldError('platformNo') }}
+            </p>
+          </div>
+
+          <!-- Info Box -->
+          <div class="tw-bg-blue-50 tw-border tw-border-blue-200 tw-rounded-md tw-p-4">
+            <div class="tw-flex tw-gap-3">
+              <i class="ph ph-info tw-text-blue-600 tw-text-xl tw-flex-shrink-0"></i>
+              <div class="tw-text-sm tw-text-blue-800">
+                <p class="tw-font-semibold tw-mb-1">Creation Details:</p>
+                <ul class="tw-list-disc tw-list-inside tw-space-y-1 tw-text-xs">
+                  <li>This will create platforms numbered 1 to the specified number</li>
+                  <li>Existing platforms will not be affected (duplicates may occur)</li>
+                  <li>Minimum 1 platform required</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-p-4 sm:tw-p-6 tw-border-t tw-bg-gray-50 tw-gap-3">
+        <div class="tw-text-sm tw-text-gray-600">
+          <i class="ph ph-info tw-mr-1"></i>
+          All fields marked with <code class="tw-text-red-500">*</code> are required
+        </div>
+        <div class="tw-flex tw-gap-3 tw-w-full sm:tw-w-auto">
+          <button type="button" 
+                  (click)="cancelForm()"
+                  class="tw-flex-1 sm:tw-flex-none tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-font-medium tw-py-2 tw-px-4 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <i class="ph ph-x tw-text-sm"></i>
+            Cancel
+          </button>
+          <button type="button" 
+                  (click)="onSubmit()" 
+                  [disabled]="platformForm.invalid || isLoading"
+                  class="tw-flex-1 sm:tw-flex-none tw-bg-blue-600 hover:tw-bg-blue-700 disabled:tw-bg-blue-300 disabled:tw-cursor-not-allowed tw-text-white tw-font-medium tw-py-2 tw-px-6 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2 tw-min-w-[120px]">
+            <i *ngIf="!isLoading" class="ph ph-check tw-text-sm"></i>
+            <div *ngIf="isLoading"
+                 class="tw-animate-spin tw-rounded-full tw-h-4 tw-w-4 tw-border-b-2 tw-border-white"></div>
+            <span>{{ isLoading ? 'Creating...' : 'Create Platforms' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div *ngIf="mode === 'preview' && currentPlatform" 
+       class="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50 tw-p-4">
+    <div class="tw-bg-white tw-rounded-lg tw-shadow-xl tw-w-full tw-max-w-lg tw-max-h-[95vh] tw-overflow-hidden">
+      <div class="tw-flex tw-items-center tw-justify-between tw-p-4 sm:tw-p-6 tw-border-b tw-bg-green-50">
+        <div>
+          <h3 class="tw-text-lg sm:tw-text-xl tw-font-bold tw-text-green-900">Platform Details</h3>
+          <p class="tw-text-sm tw-text-green-700">Complete platform information</p>
+        </div>
+        <button (click)="cancelForm()" 
+                class="tw-text-gray-400 hover:tw-text-gray-600 tw-text-xl sm:tw-text-2xl tw-transition-colors tw-p-1">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+
+      <div class="tw-p-4 sm:tw-p-6 tw-overflow-y-auto tw-max-h-[calc(95vh-12rem)]">
+        <!-- Platform Header -->
+        <div class="tw-text-center tw-mb-6">
+          <div class="tw-inline-flex tw-items-center tw-justify-center tw-w-20 tw-h-20 tw-bg-blue-100 tw-rounded-full tw-mb-3">
+            <i class="ph ph-train tw-text-4xl tw-text-blue-600"></i>
+          </div>
+          <h4 class="tw-text-xl sm:tw-text-2xl tw-font-semibold tw-text-gray-900">
+            Platform {{ currentPlatform.platformNumber }}
+          </h4>
+          <p class="tw-text-sm tw-text-gray-600 tw-mt-1">
+            {{ getStationName(currentPlatform.stationId) }}
+          </p>
+          <div class="tw-mt-2">
+            <span [class]="'tw-inline-flex tw-px-3 tw-py-1 tw-text-sm tw-font-semibold tw-rounded-full ' + getStatusClass(currentPlatform.isActive)">
+              {{ getStatusText(currentPlatform.isActive) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="tw-space-y-4">
+          <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Platform Number</label>
+              <p class="tw-text-sm tw-text-gray-900 tw-font-medium">{{ currentPlatform.platformNumber }}</p>
+            </div>
+            <div>
+              <label class="tw-text-sm tw-font-medium tw-text-gray-500">Station</label>
+              <p class="tw-text-sm tw-text-gray-900">{{ getStationName(currentPlatform.stationId) }}</p>
+            </div>
+          </div>
+
+          <!-- Station Information -->
+          <div class="tw-border-t tw-pt-4">
+            <h5 class="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3">Station Information</h5>
+            <div class="tw-bg-indigo-50 tw-p-3 tw-rounded-md">
+              <div class="tw-flex tw-items-center tw-justify-between">
+                <div>
+                  <p class="tw-text-sm tw-font-medium tw-text-indigo-900">{{ getStationName(currentPlatform.stationId) }}</p>
+                  <p class="tw-text-xs tw-text-indigo-700">Code: {{ getStationCode(currentPlatform.stationId) }}</p>
+                </div>
+                <i class="ph ph-map-trifold tw-text-2xl tw-text-indigo-600"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Information -->
+          <div class="tw-border-t tw-pt-4">
+            <h5 class="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3">System Information</h5>
+            <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Platform ID</label>
+                <p class="tw-text-sm tw-text-gray-900 tw-font-mono tw-break-all">{{ currentPlatform._id }}</p>
+              </div>
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Status</label>
+                <p class="tw-text-sm tw-text-gray-900">
+                  <span [class]="currentPlatform.isActive ? 'tw-text-green-600' : 'tw-text-red-600'">
+                    {{ currentPlatform.isActive ? '✓ Active' : '✗ Inactive' }}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Created At</label>
+                <p class="tw-text-sm tw-text-gray-900">{{ formatDate(currentPlatform.createdAt) }}</p>
+              </div>
+              <div>
+                <label class="tw-text-xs tw-font-medium tw-text-gray-500">Last Updated</label>
+                <p class="tw-text-sm tw-text-gray-900">{{ formatDate(currentPlatform.updatedAt) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="tw-flex tw-flex-col sm:tw-flex-row tw-justify-end tw-items-center tw-p-4 sm:tw-p-6 tw-border-t tw-bg-gray-50 tw-gap-3">
+        <div class="tw-flex tw-gap-3 tw-w-full sm:tw-w-auto">
+          <button (click)="cancelForm()"
+                  class="tw-flex-1 sm:tw-flex-none tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <i class="ph ph-x"></i>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>

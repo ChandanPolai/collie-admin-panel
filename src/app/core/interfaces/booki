@@ -1,0 +1,74 @@
+// booking.interface.ts
+
+export interface Booking {
+  _id: string;
+  otp: string;
+  status: string;
+  pickupDetails: {
+    station: string;
+    coachNumber: string;
+    description: string;
+  };
+  destination: string;
+  timestamp: {
+    bookedAt: string;
+    acceptedAt: string | null;
+    pickupTime: string | null;
+    completedAt: string | null;
+  };
+  fare: {
+    baseFare: string;
+    waitingTime: string;
+    waitingCharges: string;
+    totalFare: string;
+  };
+  rating: number | null;
+  feedback: string;
+  complaint: string;
+  createdAt: string;
+  updatedAt: string;
+  bookingId: string;
+  passenger: {
+    _id: string;
+    name: string;
+    mobileNo: string;
+    emailId: string;
+  };
+  collie: {
+    _id: string;
+    name: string;
+    mobileNo: string;
+    buckleNumber: string;
+    rating: string;
+  } | {};
+  duration: number | null;
+}
+
+export interface BookingResponse {
+  status: number;
+  message: string;
+  data: {
+    bookings: Booking[];
+    pagination: {
+      currentPage: string;
+      totalPages: string;
+      totalBookings: string;
+      hasNext: boolean;
+      hasPrev: boolean;
+      limit: string;
+    };
+    filters: {};
+    statistics: {
+      totalBookings: string;
+      totalRevenue: string;
+      byStatus: {
+        pending: string;
+        accepted: string;
+        'in-progress': string;
+        completed: string;
+        rejected: string;
+        cancelled: string;
+      };
+    };
+  };
+}

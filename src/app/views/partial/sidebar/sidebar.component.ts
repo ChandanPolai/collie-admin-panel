@@ -64,6 +64,20 @@ export class SidebarComponent implements OnInit {
       route: 'state'
     },
 
+    {
+      id:'platform',
+      label: 'platform',
+      icon: 'ph ph-building',
+      route: 'platform'
+
+    },
+
+    {
+      id:'booking',
+      label: 'booking',
+      icon: 'ph ph-building',
+      route: 'booking'
+    },
     
 
     // {
