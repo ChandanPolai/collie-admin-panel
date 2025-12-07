@@ -48,12 +48,16 @@ export class BookingHistoryComponent implements OnInit {
   // Pagination (server-side)
   paginationConfig = {
     page: 1,
-    limit: 10
+    limit: 10,
+    totalPages: 0,
+    totalBookings: 0
   };
   
   totalBookings: number = 0;
+  totalPages: number = 0;
   statistics: any = null;
-Object: any;
+  Object: any;
+  Math = Math;
 
   constructor(
     private bookingHistoryService: BookingHistoryService,
@@ -96,14 +100,21 @@ Object: any;
         
         if (response.data) {
           this.bookings = response.data.bookings || [];
-          this.totalBookings = response.data?.pagination?.totalBookings || 0;
+          this.totalBookings = response.data.pagination?.totalBookings || 0;
+          this.totalPages = response.data.pagination?.totalPages || 0;
+          this.paginationConfig.totalBookings = this.totalBookings;
+          this.paginationConfig.totalPages = this.totalPages;
           this.statistics = response.data?.statistics;
           
           console.log('✅ Bookings loaded:', this.bookings.length);
           console.log('Total bookings:', this.totalBookings);
+          console.log('Total pages:', this.totalPages);
         } else {
           this.bookings = [];
           this.totalBookings = 0;
+          this.totalPages = 0;
+          this.paginationConfig.totalBookings = 0;
+          this.paginationConfig.totalPages = 0;
           this.statistics = null;
         }
         
@@ -114,6 +125,9 @@ Object: any;
         swalHelper.messageToast(err?.message ?? 'Failed to load bookings.', 'error');
         this.bookings = [];
         this.totalBookings = 0;
+        this.totalPages = 0;
+        this.paginationConfig.totalBookings = 0;
+        this.paginationConfig.totalPages = 0;
         this.statistics = null;
         this.isLoading = false;
       }

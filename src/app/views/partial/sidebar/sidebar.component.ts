@@ -178,16 +178,16 @@ export class SidebarComponent implements OnInit {
     //   ]
 
     // },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: 'ph ph-gear',
-      // route: '/settings',
-      children: [
-        { id: 'passsword', label: 'Change Password', icon: 'ph ph-numpad', route: '/settings/change-password' },
-        { id: 'userProfile', label: 'User Profile', icon: 'ph ph-user-circle', route: '/settings/user-profile' }
-      ]
-    },
+    // {
+    //   id: 'settings',
+    //   label: 'Settings',
+    //   icon: 'ph ph-gear',
+    //   // route: '/settings',
+    //   children: [
+    //     { id: 'passsword', label: 'Change Password', icon: 'ph ph-numpad', route: '/settings/change-password' },
+    //     { id: 'userProfile', label: 'User Profile', icon: 'ph ph-user-circle', route: '/settings/user-profile' }
+    //   ]
+    // },
     
     {
       id: 'sign-out',
@@ -234,16 +234,9 @@ export class SidebarComponent implements OnInit {
   }
 
    _logoutUser(): void {
-      this.authservice.logoutUser().subscribe({
-        next: (response) => {
-          this.storage.clearAll();
-          swalHelper.showToast(response.message, 'success');
-          this.router.navigate(['/sign-in']);
-        },
-        error: (err) => {
-          console.error('Failed to LogOut', err);
-        },
-      });
+      this.storage.clearAll();
+      swalHelper.showToast('Logged out successfully', 'success');
+      this.router.navigate(['/sign-in']);
     }
     
   ngOnInit(): void {

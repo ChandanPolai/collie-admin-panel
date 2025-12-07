@@ -70,16 +70,9 @@ export class HeaderComponent implements OnInit {
   }
 
   _logoutUser(): void {
-    this.authservice.logoutUser().subscribe({
-      next: (response) => {
-        this.storage.clearAll();
-        swalHelper.showToast(response.message, 'success');
-        this.router.navigate(['/sign-in']);
-      },
-      error: (err) => {
-        console.error('Failed to LogOut', err);
-      },
-    });
+    this.storage.clearAll();
+    swalHelper.showToast('Logged out successfully', 'success');
+    this.router.navigate(['/sign-in']);
     this.showProfileDropdown = false;
   }
 

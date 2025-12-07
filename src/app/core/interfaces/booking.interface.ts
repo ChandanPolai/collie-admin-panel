@@ -67,15 +67,18 @@ export interface Booking {
 
 export interface BookingHistoryData {
   bookings: Booking[];
-  totalBookings: number;
-  totalPages: number;
-  currentPage: number;
-Object:any;
- pagination: {
+  totalBookings?: number;
+  totalPages?: number;
+  currentPage?: number;
+  pagination: {
     totalBookings: number;
+    totalPages: number;
+    currentPage: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+    limit: string;
   };
   statistics: any;
-
 }
 
 export interface BookingHistoryResponse {

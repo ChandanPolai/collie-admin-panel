@@ -47,6 +47,10 @@ export class CollieRegisterComponent implements OnInit {
   selectedFile: File | null = null;
   fileError: string | null = null;
   
+  // Multi-step form
+  currentStep: number = 1;
+  totalSteps: number = 2;
+  
   // Camera related properties
   isCameraOpen: boolean = false;
   isCameraLoading: boolean = false;
@@ -91,16 +95,46 @@ export class CollieRegisterComponent implements OnInit {
 
   private initializeForm(): void {
     this.collieForm = this.fb.group({
+      // Step 1: Personal Details
       name: ['', [Validators.required, Validators.minLength(2)]],
       mobileNo: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
       age: ['', [Validators.required, Validators.min(18), Validators.max(65)]],
-      deviceType: ['SmartPhone', Validators.required],
-      emailId: ['', [Validators.email]],
       gender: ['', Validators.required],
+      emailId: ['', [Validators.email]],
       buckleNumber: ['', [Validators.required, Validators.minLength(3)]],
-      stationId: ['', Validators.required],
-      address: ['', [Validators.required, Validators.minLength(10)]]
+      deviceType: ['SmartPhone', Validators.required],
+      
+      // Step 2: Address & Station
+      address: ['', Validators.required],
+      stationId: ['', Validators.required]
     });
+  }
+
+  isStep1Valid(): boolean {
+    return !!(this.collieForm.get('name')?.valid &&
+           this.collieForm.get('mobileNo')?.valid &&
+           this.collieForm.get('age')?.valid &&
+           this.collieForm.get('gender')?.valid &&
+           this.collieForm.get('buckleNumber')?.valid &&
+           this.collieForm.get('deviceType')?.valid &&
+           (this.selectedFile || this.capturedImageUrl) !== null);
+  }
+
+  isStep2Valid(): boolean {
+    return !!(this.collieForm.get('address')?.valid &&
+           this.collieForm.get('stationId')?.valid);
+  }
+
+  nextStep(): void {
+    if (this.currentStep === 1 && this.isStep1Valid()) {
+      this.currentStep = 2;
+    }
+  }
+
+  previousStep(): void {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+    }
   }
 
   loadPendingCollies(): void {
@@ -152,6 +186,7 @@ export class CollieRegisterComponent implements OnInit {
 
   openRegisterForm(): void {
     this.mode = 'register';
+    this.currentStep = 1;
     this.resetForm();
   }
 
@@ -395,10 +430,18 @@ export class CollieRegisterComponent implements OnInit {
   }
 
   getCollieImage(collie: PendingApproval): string {
-    if (collie.image?.url) {
+    if (collie?.image?.url) {
       return environment.imageUrl + collie.image.url;
     }
     return '/images/profile-avtart.png';
+  }
+
+  onImageError(event: Event): void {
+    const img = event && (event.target as HTMLImageElement | null);
+    if (img) {
+      img.onerror = null; // prevent infinite loop just in case
+      img.src = '/images/profile-avtart.png';
+    }
   }
 
   getStationName(stationId: any): string {
@@ -473,6 +516,7 @@ export class CollieRegisterComponent implements OnInit {
     this.fileError = null;
     this.stopCamera();
     this.clearFileInput();
+    this.currentStep = 1;
   }
 
   cancelForm(): void {
@@ -490,11 +534,15 @@ export class CollieRegisterComponent implements OnInit {
     });
   }
 
-  getApprovalStatusClass(): string {
-    return 'tw-bg-yellow-100 tw-text-yellow-800';
+  getApprovalStatusClass(collie?: PendingApproval): string {
+    const approved = collie?.isApproved === true;
+    return approved
+      ? 'tw-bg-green-100 tw-text-green-800'
+      : 'tw-bg-yellow-100 tw-text-yellow-800';
   }
 
-  getApprovalStatusText(): string {
-    return 'Pending Approval';
+  getApprovalStatusText(collie?: PendingApproval): string {
+    const approved = collie?.isApproved === true;
+    return approved ? 'Approved' : 'Pending Approval';
   }
 }

@@ -204,14 +204,41 @@
       </div>
     </div>
 
-    <div class="tw-mt-6 tw-flex tw-justify-center" *ngIf="totalBookings > 0">
-      <pagination-controls [id]="'booking-pagination'" 
-                           (pageChange)="onPageChange($event)" 
-                           [maxSize]="5" 
-                           [directionLinks]="true" 
-                           previousLabel="Previous" 
-                           nextLabel="Next">
-      </pagination-controls>
+    <!-- Pagination Info & Controls -->
+    <div class="tw-mt-6 tw-flex tw-flex-col sm:tw-flex-row tw-items-center tw-justify-between tw-gap-4">
+      <div class="tw-text-sm tw-text-gray-600">
+        <span *ngIf="totalBookings > 0">
+          Showing <strong>{{ (paginationConfig.page - 1) * paginationConfig.limit + 1 }}</strong> to 
+          <strong>{{ Math.min(paginationConfig.page * paginationConfig.limit, totalBookings) }}</strong> 
+          of <strong>{{ totalBookings }}</strong> bookings
+        </span>
+        <span *ngIf="totalBookings === 0">No bookings found</span>
+      </div>
+      
+      <div class="tw-flex tw-items-center tw-gap-2" *ngIf="totalPages > 1">
+        <button (click)="onPageChange(paginationConfig.page - 1)" 
+                [disabled]="paginationConfig.page === 1"
+                class="tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md tw-text-sm tw-font-medium tw-text-gray-700 hover:tw-bg-gray-50 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed">
+          <i class="ph ph-arrow-left"></i> Previous
+        </button>
+        
+        <div class="tw-flex tw-items-center tw-gap-1">
+          <button *ngFor="let page of [].constructor(totalPages); let i = index"
+                  (click)="onPageChange(i + 1)"
+                  [class.tw-bg-blue-600]="paginationConfig.page === i + 1"
+                  [class.tw-text-white]="paginationConfig.page === i + 1"
+                  [class.tw-bg-gray-100]="paginationConfig.page !== i + 1"
+                  class="tw-px-3 tw-py-2 tw-rounded-md tw-text-sm tw-font-medium tw-transition-colors">
+            {{ i + 1 }}
+          </button>
+        </div>
+        
+        <button (click)="onPageChange(paginationConfig.page + 1)" 
+                [disabled]="paginationConfig.page === totalPages"
+                class="tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md tw-text-sm tw-font-medium tw-text-gray-700 hover:tw-bg-gray-50 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed">
+          Next <i class="ph ph-arrow-right"></i>
+        </button>
+      </div>
     </div>
   </div>
 

@@ -65,6 +65,7 @@
               <td class="tw-px-4 tw-py-4">
                 <div class="tw-flex tw-items-center">
                   <img [src]="getCollieImage(collie)" 
+                       (error)="onImageError($event)"
                        [alt]="collie.name" 
                        class="tw-h-10 tw-w-10 tw-rounded-full tw-object-cover tw-border-2 tw-border-gray-300">
                   <div class="tw-ml-3">
@@ -87,8 +88,8 @@
                 <div class="tw-text-xs tw-text-gray-500">Code: {{getStationCode(collie.stationId)}}</div>
               </td>
               <td class="tw-px-4 tw-py-4">
-                <span [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full ' + getApprovalStatusClass()">
-                  {{getApprovalStatusText()}}
+                <span [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full ' + getApprovalStatusClass(collie)">
+                  {{getApprovalStatusText(collie)}}
                 </span>
               </td>
               <td class="tw-px-4 tw-py-4 tw-text-center">
@@ -122,6 +123,7 @@
              class="tw-border-b tw-p-4">
           <div class="tw-flex tw-items-start tw-gap-3">
             <img [src]="getCollieImage(collie)" 
+                 (error)="onImageError($event)"
                  class="tw-h-12 tw-w-12 tw-rounded-full tw-object-cover tw-border-2 tw-border-gray-300">
             <div class="tw-flex-1">
               <p class="tw-font-medium tw-text-gray-900">{{collie.name}}</p>
@@ -130,8 +132,8 @@
                 <span class="tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full tw-bg-purple-100 tw-text-purple-800">
                   {{collie.buckleNumber}}
                 </span>
-                <span [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full ' + getApprovalStatusClass()">
-                  {{getApprovalStatusText()}}
+                <span [class]="'tw-inline-flex tw-px-2 tw-py-1 tw-text-xs tw-font-semibold tw-rounded-full ' + getApprovalStatusClass(collie)">
+                  {{getApprovalStatusText(collie)}}
                 </span>
               </div>
               <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Station: {{getStationName(collie.stationId)}}</p>
@@ -162,314 +164,345 @@
     </div>
   </div>
 
-  <!-- Register Form Modal -->
-  <div *ngIf="mode === 'register'" 
-       class="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50 tw-p-4">
-    <div class="tw-bg-white tw-rounded-lg tw-shadow-xl tw-w-full tw-max-w-2xl tw-max-h-[95vh] tw-overflow-hidden">
-      <div class="tw-flex tw-items-center tw-justify-between tw-p-4 sm:tw-p-6 tw-border-b tw-bg-blue-50">
-        <div>
-          <h3 class="tw-text-lg sm:tw-text-xl tw-font-bold tw-text-blue-900">Register New Collie</h3>
-          <p class="tw-text-sm tw-text-blue-700">Fill in the details to register a new collie</p>
+  <!-- Register Form Modal - Multi-Step -->
+  <ng-container *ngTemplateOutlet="registerFormTemplate"></ng-container>
+
+  <ng-template #registerFormTemplate>
+    <!-- Register Form Modal - Multi-Step -->
+    <div *ngIf="mode === 'register'" 
+         class="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50 tw-p-4">
+      <div class="tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-2xl tw-max-h-[95vh] tw-overflow-hidden tw-flex tw-flex-col">
+        
+        <!-- Header with Progress -->
+        <div class="tw-bg-gradient-to-r tw-from-blue-600 tw-to-blue-700 tw-px-6 sm:tw-px-8 tw-py-6">
+          <div class="tw-flex tw-items-center tw-justify-between tw-mb-6">
+            <div>
+              <h3 class="tw-text-2xl tw-font-bold tw-text-white">Register New Collie</h3>
+              <p class="tw-text-blue-100 tw-text-sm tw-mt-1">Step {{ currentStep }} of {{ totalSteps }}</p>
+            </div>
+            <button (click)="cancelForm()" 
+                    class="tw-text-blue-100 hover:tw-text-white tw-text-2xl tw-transition-colors tw-p-1">
+              <i class="ph ph-x"></i>
+            </button>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="tw-flex tw-gap-2">
+            <div *ngFor="let step of [1, 2]" 
+                 class="tw-flex-1 tw-h-2 tw-rounded-full tw-transition-all tw-duration-300"
+                 [class.tw-bg-white]="step <= currentStep"
+                 [class.tw-bg-blue-300]="step > currentStep">
+            </div>
+          </div>
         </div>
-        <button (click)="cancelForm()" 
-                class="tw-text-gray-400 hover:tw-text-gray-600 tw-text-xl sm:tw-text-2xl tw-transition-colors tw-p-1">
-          <i class="ph ph-x"></i>
-        </button>
-      </div>
 
-      <div class="tw-p-4 sm:tw-p-6 tw-overflow-y-auto tw-max-h-[75vh]">
-        <form [formGroup]="collieForm" (ngSubmit)="onSubmit()" class="tw-space-y-4">
-          
-          <!-- Profile Image Upload/Capture -->
-          <div class="tw-text-center">
-            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              Profile Picture <code class="tw-text-red-500">*</code>
-              <span class="tw-text-gray-500 tw-text-xs">[Max 5MB, JPG/PNG only]</span>
-            </label>
+        <!-- Form Content -->
+        <div class="tw-flex-1 tw-overflow-y-auto tw-px-6 sm:tw-px-8 tw-py-8">
+          <form [formGroup]="collieForm" class="tw-space-y-6">
+            
+            <!-- STEP 1: Personal Details & Photo -->
+            <div *ngIf="currentStep === 1" class="tw-space-y-6 tw-animate-fadeIn">
+              
+              <!-- Profile Photo Section -->
+              <div class="tw-bg-gradient-to-br tw-from-blue-50 tw-to-indigo-50 tw-rounded-xl tw-p-6 tw-border tw-border-blue-200">
+                <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-800 tw-mb-4">
+                  <i class="ph ph-camera tw-mr-2"></i>Profile Photo <code class="tw-text-red-500">*</code>
+                </label>
 
-            <!-- Action Buttons -->
-            <div *ngIf="!selectedFile && !capturedImageUrl && !isCameraOpen" class="tw-flex tw-gap-2 tw-mb-3">
-              <button type="button"
-                      (click)="openCamera()"
-                      [disabled]="isCameraLoading"
-                      class="tw-flex-1 tw-bg-purple-600 hover:tw-bg-purple-700 disabled:tw-bg-purple-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
-                <i [class]="isCameraLoading ? 'ph ph-spinner tw-animate-spin' : 'ph ph-camera'"></i>
-                <span>{{ isCameraLoading ? 'Opening Camera...' : 'Open Camera' }}</span>
-              </button>
-              <button type="button"
-                      (click)="fileInput.click()"
-                      class="tw-flex-1 tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
-                <i class="ph ph-folder-open"></i>
-                <span>Choose File</span>
-              </button>
-            </div>
+                <!-- Action Buttons -->
+                <div *ngIf="!selectedFile && !capturedImageUrl && !isCameraOpen" class="tw-flex tw-gap-3 tw-mb-4">
+                  <button type="button"
+                          (click)="openCamera()"
+                          [disabled]="isCameraLoading"
+                          class="tw-flex-1 tw-bg-purple-600 hover:tw-bg-purple-700 disabled:tw-bg-purple-300 tw-text-white tw-px-4 tw-py-3 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-gap-2 tw-font-medium tw-transition-all">
+                    <i [class]="isCameraLoading ? 'ph ph-spinner tw-animate-spin' : 'ph ph-camera'"></i>
+                    <span>{{ isCameraLoading ? 'Opening...' : 'Take Photo' }}</span>
+                  </button>
+                  <button type="button"
+                          (click)="fileInput.click()"
+                          class="tw-flex-1 tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-3 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-gap-2 tw-font-medium tw-transition-all">
+                    <i class="ph ph-folder-open"></i>
+                    <span>Upload File</span>
+                  </button>
+                </div>
 
-            <!-- Hidden File Input -->
-            <input #fileInput 
-                   type="file" 
-                   (change)="onFileSelected($event)"
-                   accept="image/jpeg,image/jpg,image/png" 
-                   class="tw-hidden">
+                <input #fileInput type="file" (change)="onFileSelected($event)"
+                       accept="image/jpeg,image/jpg,image/png" class="tw-hidden">
 
-            <!-- Camera View -->
-            <div *ngIf="isCameraOpen" class="tw-space-y-3">
-              <div class="tw-relative tw-bg-black tw-rounded-lg tw-overflow-hidden">
-                <video #videoElement 
-                       autoplay 
-                       playsinline
-                       class="tw-w-full tw-h-auto tw-max-h-96"></video>
-                <canvas #canvasElement class="tw-hidden"></canvas>
+                <!-- Camera View -->
+                <div *ngIf="isCameraOpen" class="tw-space-y-3">
+                  <div class="tw-relative tw-bg-black tw-rounded-lg tw-overflow-hidden">
+                    <video #videoElement autoplay playsinline class="tw-w-full tw-h-auto tw-max-h-96"></video>
+                    <canvas #canvasElement class="tw-hidden"></canvas>
+                  </div>
+                  <div class="tw-flex tw-gap-2">
+                    <button type="button" (click)="capturePhoto()"
+                            class="tw-flex-1 tw-bg-green-600 hover:tw-bg-green-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-gap-2 tw-font-medium">
+                      <i class="ph ph-camera"></i>Capture
+                    </button>
+                    <button type="button" (click)="stopCamera()"
+                            class="tw-flex-1 tw-bg-red-600 hover:tw-bg-red-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-gap-2 tw-font-medium">
+                      <i class="ph ph-x"></i>Cancel
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Drag & Drop Zone -->
+                <div *ngIf="!isCameraOpen && !selectedFile && !capturedImageUrl"
+                     class="tw-border-2 tw-border-dashed tw-border-blue-300 tw-rounded-lg tw-p-6 tw-text-center hover:tw-border-blue-500 tw-transition-colors"
+                     [class.tw-border-red-400]="fileError"
+                     (dragover)="onDragOver($event)"
+                     (dragleave)="onDragLeave($event)"
+                     (drop)="onDrop($event)">
+                  <i class="ph ph-image tw-text-4xl tw-text-blue-400 tw-mb-2"></i>
+                  <p class="tw-text-sm tw-text-gray-700 tw-font-medium">Drag & drop image here</p>
+                  <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Max 5MB • JPG, PNG</p>
+                </div>
+
+                <!-- Preview -->
+                <div *ngIf="selectedFile || capturedImageUrl" class="tw-space-y-3">
+                  <div class="tw-flex tw-justify-center">
+                    <img [src]="getImagePreviewUrl()" 
+                         [alt]="selectedFile?.name || 'Captured'"
+                         class="tw-w-32 tw-h-32 tw-object-cover tw-rounded-full tw-border-4 tw-border-blue-300 tw-shadow-lg">
+                  </div>
+                  <div class="tw-flex tw-gap-2">
+                    <button type="button" (click)="capturedImageUrl ? removeCapturedPhoto() : removeSelectedFile()"
+                            class="tw-flex-1 tw-bg-red-500 hover:tw-bg-red-600 tw-text-white tw-px-3 tw-py-2 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-gap-2 tw-font-medium">
+                      <i class="ph ph-trash"></i>Remove
+                    </button>
+                    <button *ngIf="capturedImageUrl" type="button" (click)="retakePhoto()"
+                            class="tw-flex-1 tw-bg-purple-500 hover:tw-bg-purple-600 tw-text-white tw-px-3 tw-py-2 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-gap-2 tw-font-medium">
+                      <i class="ph ph-camera"></i>Retake
+                    </button>
+                    <button *ngIf="selectedFile" type="button" (click)="fileInput.click()"
+                            class="tw-flex-1 tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-2 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-gap-2 tw-font-medium">
+                      <i class="ph ph-folder-open"></i>Change
+                    </button>
+                  </div>
+                </div>
+
+                <p *ngIf="fileError" class="tw-text-red-600 tw-text-sm tw-mt-2 tw-flex tw-items-center tw-gap-1">
+                  <i class="ph ph-warning-circle"></i>{{ fileError }}
+                </p>
               </div>
-              <div class="tw-flex tw-gap-2">
-                <button type="button"
-                        (click)="capturePhoto()"
-                        class="tw-flex-1 tw-bg-green-600 hover:tw-bg-green-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
-                  <i class="ph ph-camera"></i>
-                  <span>Capture Photo</span>
-                </button>
-                <button type="button"
-                        (click)="stopCamera()"
-                        class="tw-flex-1 tw-bg-red-600 hover:tw-bg-red-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
-                  <i class="ph ph-x"></i>
-                  <span>Cancel</span>
-                </button>
-              </div>
-            </div>
 
-            <!-- Drag & Drop Zone (only show if no camera and no file) -->
-            <div *ngIf="!isCameraOpen && !selectedFile && !capturedImageUrl"
-                 class="tw-border-2 tw-border-dashed tw-border-gray-300 tw-rounded-md tw-p-4 tw-text-center hover:tw-border-blue-400 tw-transition-colors"
-                 [class.tw-border-red-400]="fileError"
-                 (dragover)="onDragOver($event)"
-                 (dragleave)="onDragLeave($event)"
-                 (drop)="onDrop($event)">
-              <i class="ph ph-image tw-text-2xl sm:tw-text-3xl tw-text-gray-400 tw-mb-2"></i>
-              <p class="tw-text-sm tw-text-gray-600">
-                Or drag & drop image here
-              </p>
-              <p class="tw-text-xs tw-text-gray-500 tw-mt-1">Maximum file size: 5MB</p>
-            </div>
-
-            <!-- Preview (File or Captured Photo) -->
-            <div *ngIf="selectedFile || capturedImageUrl" class="tw-space-y-3">
-              <div class="tw-flex tw-justify-center">
-                <img [src]="getImagePreviewUrl()" 
-                     [alt]="selectedFile?.name || 'Captured photo'"
-                     class="tw-w-32 tw-h-32 sm:tw-w-40 sm:tw-h-40 tw-object-cover tw-rounded-full tw-border-4 tw-border-gray-300">
-              </div>
-              <div class="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                <div class="tw-text-center">
-                  <p class="tw-text-sm tw-font-medium tw-text-gray-900">
-                    {{ selectedFile ? selectedFile.name : 'Captured Photo' }}
+              <!-- Personal Details Grid -->
+              <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+                
+                <!-- Name -->
+                <div>
+                  <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">
+                    Full Name <code class="tw-text-red-500">*</code>
+                  </label>
+                  <input formControlName="name" type="text" placeholder="Enter full name"
+                         class="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-border-transparent tw-transition-all"
+                         [class.tw-border-red-500]="isFieldInvalid('name')">
+                  <p *ngIf="isFieldInvalid('name')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                    {{ getFieldError('name') }}
                   </p>
-                  <p *ngIf="selectedFile" class="tw-text-xs tw-text-gray-500">
-                    {{ getFileSize(selectedFile.size) }}
+                </div>
+
+                <!-- Mobile Number -->
+                <div>
+                  <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">
+                    Mobile Number <code class="tw-text-red-500">*</code>
+                  </label>
+                  <input formControlName="mobileNo" type="tel" placeholder="10-digit number"
+                         maxlength="10" inputmode="numeric"
+                         class="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-border-transparent tw-transition-all"
+                         [class.tw-border-red-500]="isFieldInvalid('mobileNo')">
+                  <p *ngIf="isFieldInvalid('mobileNo')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                    {{ getFieldError('mobileNo') }}
+                  </p>
+                </div>
+
+                <!-- Age -->
+                <div>
+                  <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">
+                    Age <code class="tw-text-red-500">*</code>
+                  </label>
+                  <input formControlName="age" type="number" placeholder="18-65"
+                         min="18" max="65"
+                         class="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-border-transparent tw-transition-all"
+                         [class.tw-border-red-500]="isFieldInvalid('age')">
+                  <p *ngIf="isFieldInvalid('age')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                    {{ getFieldError('age') }}
+                  </p>
+                </div>
+
+                <!-- Gender -->
+                <div>
+                  <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">
+                    Gender <code class="tw-text-red-500">*</code>
+                  </label>
+                  <ng-select formControlName="gender" placeholder="Select gender"
+                             class="tw-rounded-lg"
+                             [class.tw-border-red-500]="isFieldInvalid('gender')">
+                    <ng-option *ngFor="let gender of genders" [value]="gender">
+                      {{ gender }}
+                    </ng-option>
+                  </ng-select>
+                  <p *ngIf="isFieldInvalid('gender')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                    {{ getFieldError('gender') }}
+                  </p>
+                </div>
+
+                <!-- Buckle Number -->
+                <div>
+                  <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">
+                    Buckle Number <code class="tw-text-red-500">*</code>
+                  </label>
+                  <input formControlName="buckleNumber" type="text" placeholder="Enter buckle number"
+                         class="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-border-transparent tw-transition-all"
+                         [class.tw-border-red-500]="isFieldInvalid('buckleNumber')">
+                  <p *ngIf="isFieldInvalid('buckleNumber')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                    {{ getFieldError('buckleNumber') }}
+                  </p>
+                </div>
+
+                <!-- Device Type -->
+                <div>
+                  <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">
+                    Device Type <code class="tw-text-red-500">*</code>
+                  </label>
+                  <ng-select formControlName="deviceType" placeholder="Select device"
+                             class="tw-rounded-lg"
+                             [class.tw-border-red-500]="isFieldInvalid('deviceType')">
+                    <ng-option *ngFor="let device of deviceTypes" [value]="device">
+                      {{ device }}
+                    </ng-option>
+                  </ng-select>
+                  <p *ngIf="isFieldInvalid('deviceType')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                    {{ getFieldError('deviceType') }}
                   </p>
                 </div>
               </div>
-              <div class="tw-flex tw-gap-2">
-                <button type="button" 
-                        (click)="capturedImageUrl ? removeCapturedPhoto() : removeSelectedFile()"
-                        class="tw-flex-1 tw-bg-red-500 hover:tw-bg-red-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
-                  <i class="ph ph-trash"></i>
-                  <span>Remove</span>
-                </button>
-                <button *ngIf="capturedImageUrl"
-                        type="button" 
-                        (click)="retakePhoto()"
-                        class="tw-flex-1 tw-bg-purple-500 hover:tw-bg-purple-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
-                  <i class="ph ph-camera"></i>
-                  <span>Retake</span>
-                </button>
-                <button *ngIf="selectedFile"
-                        type="button" 
-                        (click)="fileInput.click()"
-                        class="tw-flex-1 tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-flex tw-items-center tw-justify-center tw-gap-2">
-                  <i class="ph ph-folder-open"></i>
-                  <span>Change</span>
-                </button>
+
+              <!-- Email (Optional) -->
+              <div>
+                <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-2">
+                  Email Address (Optional)
+                </label>
+                <input formControlName="emailId" type="email" placeholder="Enter email address"
+                       class="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 focus:tw-border-transparent tw-transition-all"
+                       [class.tw-border-red-500]="isFieldInvalid('emailId')">
+                <p *ngIf="isFieldInvalid('emailId')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                  {{ getFieldError('emailId') }}
+                </p>
               </div>
             </div>
 
-            <p *ngIf="fileError" class="tw-text-red-500 tw-text-sm tw-mt-2">{{ fileError }}</p>
-          </div>
+            <!-- STEP 2: Address & Station -->
+            <div *ngIf="currentStep === 2" class="tw-space-y-6 tw-animate-fadeIn">
+              
+              <!-- Address Section -->
+              <div class="tw-bg-gradient-to-br tw-from-green-50 tw-to-emerald-50 tw-rounded-xl tw-p-6 tw-border tw-border-green-200">
+                <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-800 tw-mb-4">
+                  <i class="ph ph-map-pin tw-mr-2"></i>Address <code class="tw-text-red-500">*</code>
+                </label>
+                <textarea formControlName="address" rows="4" placeholder="Enter complete address"
+                          class="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-green-500 focus:tw-border-transparent tw-transition-all tw-resize-none"
+                          [class.tw-border-red-500]="isFieldInvalid('address')"></textarea>
+                <p *ngIf="isFieldInvalid('address')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                  {{ getFieldError('address') }}
+                </p>
+              </div>
 
-          <!-- Two Column Layout for Form Fields -->
-          <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
-            
-            <!-- Name -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Full Name <code class="tw-text-red-500">*</code>
-              </label>
-              <input formControlName="name" 
-                     type="text" 
-                     placeholder="Enter full name"
-                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
-                     [class.tw-border-red-500]="isFieldInvalid('name')">
-              <p *ngIf="isFieldInvalid('name')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('name') }}
-              </p>
+              <!-- Station Section -->
+              <div class="tw-bg-gradient-to-br tw-from-orange-50 tw-to-amber-50 tw-rounded-xl tw-p-6 tw-border tw-border-orange-200">
+                <label class="tw-block tw-text-sm tw-font-semibold tw-text-gray-800 tw-mb-4">
+                  <i class="ph ph-building tw-mr-2"></i>Station <code class="tw-text-red-500">*</code>
+                </label>
+                <ng-select formControlName="stationId" placeholder="Select your station"
+                           class="tw-rounded-lg"
+                           [class.tw-border-red-500]="isFieldInvalid('stationId')">
+                  <ng-option *ngFor="let station of allStations" [value]="station._id">
+                    {{ station.name }} ({{ station.code }})
+                  </ng-option>
+                </ng-select>
+                <p *ngIf="isFieldInvalid('stationId')" class="tw-text-red-600 tw-text-xs tw-mt-1">
+                  {{ getFieldError('stationId') }}
+                </p>
+              </div>
+
+              <!-- Summary Card -->
+              <div class="tw-bg-blue-50 tw-rounded-xl tw-p-6 tw-border tw-border-blue-200">
+                <h4 class="tw-text-sm tw-font-semibold tw-text-gray-800 tw-mb-4">
+                  <i class="ph ph-check-circle tw-mr-2 tw-text-green-600"></i>Registration Summary
+                </h4>
+                <div class="tw-space-y-2 tw-text-sm">
+                  <div class="tw-flex tw-justify-between">
+                    <span class="tw-text-gray-600">Name:</span>
+                    <span class="tw-font-medium tw-text-gray-900">{{ collieForm.get('name')?.value || 'N/A' }}</span>
+                  </div>
+                  <div class="tw-flex tw-justify-between">
+                    <span class="tw-text-gray-600">Mobile:</span>
+                    <span class="tw-font-medium tw-text-gray-900">{{ collieForm.get('mobileNo')?.value || 'N/A' }}</span>
+                  </div>
+                  <div class="tw-flex tw-justify-between">
+                    <span class="tw-text-gray-600">Buckle Number:</span>
+                    <span class="tw-font-medium tw-text-gray-900">{{ collieForm.get('buckleNumber')?.value || 'N/A' }}</span>
+                  </div>
+                  <div class="tw-flex tw-justify-between">
+                    <span class="tw-text-gray-600">Station:</span>
+                    <span class="tw-font-medium tw-text-gray-900">{{ getStationName(collieForm.get('stationId')?.value) }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Mobile Number -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Mobile Number <code class="tw-text-red-500">*</code>
-              </label>
-              <input formControlName="mobileNo" 
-                     type="tel" 
-                     placeholder="Enter 10-digit mobile number"
-                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
-                     [class.tw-border-red-500]="isFieldInvalid('mobileNo')">
-              <p *ngIf="isFieldInvalid('mobileNo')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('mobileNo') }}
-              </p>
-            </div>
-
-            <!-- Age -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Age <code class="tw-text-red-500">*</code>
-              </label>
-              <input formControlName="age" 
-                     type="number" 
-                     placeholder="Enter age (18-65)"
-                     min="18"
-                     max="65"
-                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
-                     [class.tw-border-red-500]="isFieldInvalid('age')">
-              <p *ngIf="isFieldInvalid('age')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('age') }}
-              </p>
-            </div>
-
-            <!-- Gender -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Gender <code class="tw-text-red-500">*</code>
-              </label>
-              <ng-select formControlName="gender" 
-                         placeholder="Select gender"
-                         [class.tw-border-red-500]="isFieldInvalid('gender')">
-                <ng-option *ngFor="let gender of genders" [value]="gender">
-                  {{gender}}
-                </ng-option>
-              </ng-select>
-              <p *ngIf="isFieldInvalid('gender')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('gender') }}
-              </p>
-            </div>
-
-            <!-- Email (Optional) -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Email Address
-              </label>
-              <input formControlName="emailId" 
-                     type="email" 
-                     placeholder="Enter email address"
-                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
-                     [class.tw-border-red-500]="isFieldInvalid('emailId')">
-              <p *ngIf="isFieldInvalid('emailId')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('emailId') }}
-              </p>
-            </div>
-
-            <!-- Buckle Number -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Buckle Number <code class="tw-text-red-500">*</code>
-              </label>
-              <input formControlName="buckleNumber" 
-                     type="text" 
-                     placeholder="Enter buckle number"
-                     class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500"
-                     [class.tw-border-red-500]="isFieldInvalid('buckleNumber')">
-              <p *ngIf="isFieldInvalid('buckleNumber')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('buckleNumber') }}
-              </p>
-            </div>
-
-            <!-- Device Type -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Device Type <code class="tw-text-red-500">*</code>
-              </label>
-              <ng-select formControlName="deviceType" 
-                         placeholder="Select device type"
-                         [class.tw-border-red-500]="isFieldInvalid('deviceType')">
-                <ng-option *ngFor="let device of deviceTypes" [value]="device">
-                  {{device}}
-                </ng-option>
-              </ng-select>
-              <p *ngIf="isFieldInvalid('deviceType')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('deviceType') }}
-              </p>
-            </div>
-
-            <!-- Station -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                Station <code class="tw-text-red-500">*</code>
-              </label>
-              <ng-select formControlName="stationId" 
-                         placeholder="Select station"
-                         [class.tw-border-red-500]="isFieldInvalid('stationId')">
-                <ng-option *ngFor="let station of allStations" [value]="station._id">
-                  {{station.name}} ({{station.code}})
-                </ng-option>
-              </ng-select>
-              <p *ngIf="isFieldInvalid('stationId')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-                {{ getFieldError('stationId') }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Address (Full Width) -->
-          <div>
-            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              Address <code class="tw-text-red-500">*</code>
-            </label>
-            <textarea formControlName="address" 
-                      rows="3" 
-                      placeholder="Enter full address"
-                      class="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-gray-300 tw-rounded-md focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-blue-500 tw-resize-none"
-                      [class.tw-border-red-500]="isFieldInvalid('address')"></textarea>
-            <p *ngIf="isFieldInvalid('address')" class="tw-text-red-500 tw-text-sm tw-mt-1">
-              {{ getFieldError('address') }}
-            </p>
-          </div>
-
-        </form>
-      </div>
-
-      <!-- Form Actions -->
-      <div class="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-p-4 sm:tw-p-6 tw-border-t tw-bg-gray-50 tw-gap-3">
-        <div class="tw-text-sm tw-text-gray-600">
-          <i class="ph ph-info tw-mr-1"></i>
-          All fields marked with <code class="tw-text-red-500">*</code> are required
+          </form>
         </div>
-        <div class="tw-flex tw-gap-3 tw-w-full sm:tw-w-auto">
-          <button type="button" 
-                  (click)="cancelForm()"
-                  class="tw-flex-1 sm:tw-flex-none tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-font-medium tw-py-2 tw-px-4 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2">
-            <i class="ph ph-x tw-text-sm"></i>
-            Cancel
+
+        <!-- Footer with Navigation -->
+        <div class="tw-bg-gray-50 tw-border-t tw-border-gray-200 tw-px-6 sm:tw-px-8 tw-py-4 tw-flex tw-items-center tw-justify-between tw-gap-3">
+          <button type="button" (click)="previousStep()" *ngIf="currentStep > 1"
+                  class="tw-bg-gray-500 hover:tw-bg-gray-600 tw-text-white tw-px-6 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-all tw-flex tw-items-center tw-gap-2">
+            <i class="ph ph-arrow-left"></i>Previous
           </button>
-          <button type="button" 
-                  (click)="onSubmit()" 
-                  [disabled]="collieForm.invalid || (!selectedFile && !capturedImageUrl) || isLoading"
-class="tw-flex-1 sm:tw-flex-none tw-bg-blue-600 hover:tw-bg-blue-700 disabled:tw-bg-blue-300 disabled:tw-cursor-not-allowed tw-text-white tw-font-medium tw-py-2 tw-px-6 tw-rounded-md tw-transition-colors tw-flex tw-items-center tw-justify-center tw-gap-2 tw-min-w-[150px]">
-            <i *ngIf="!isLoading" class="ph ph-check tw-text-sm"></i>
-            <div *ngIf="isLoading"
-                 class="tw-animate-spin tw-rounded-full tw-h-4 tw-w-4 tw-border-b-2 tw-border-white"></div>
-            <span>{{ isLoading ? 'Registering...' : 'Register Collie' }}</span>
-          </button>
+          <div *ngIf="currentStep === 1" class="tw-flex-1"></div>
+
+          <div class="tw-flex tw-gap-3">
+            <button type="button" (click)="cancelForm()"
+                    class="tw-bg-gray-300 hover:tw-bg-gray-400 tw-text-gray-800 tw-px-6 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-all">
+              Cancel
+            </button>
+
+            <button type="button" (click)="nextStep()" *ngIf="currentStep === 1"
+                    [disabled]="!isStep1Valid()"
+                    class="tw-bg-blue-600 hover:tw-bg-blue-700 disabled:tw-bg-blue-300 disabled:tw-cursor-not-allowed tw-text-white tw-px-6 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-all tw-flex tw-items-center tw-gap-2">
+              Next <i class="ph ph-arrow-right"></i>
+            </button>
+
+            <button type="button" (click)="onSubmit()" *ngIf="currentStep === 2"
+                    [disabled]="!isStep2Valid() || isLoading"
+                    class="tw-bg-green-600 hover:tw-bg-green-700 disabled:tw-bg-green-300 disabled:tw-cursor-not-allowed tw-text-white tw-px-6 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-all tw-flex tw-items-center tw-gap-2">
+              <div *ngIf="isLoading" class="tw-animate-spin tw-rounded-full tw-h-4 tw-w-4 tw-border-b-2 tw-border-white"></div>
+              <span>{{ isLoading ? 'Registering...' : 'Register' }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <style>
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .tw-animate-fadeIn {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+    </style>
+  </ng-template>
 
   <!-- Preview Modal -->
   <div *ngIf="mode === 'preview' && currentCollie" 
@@ -490,13 +523,14 @@ class="tw-flex-1 sm:tw-flex-none tw-bg-blue-600 hover:tw-bg-blue-700 disabled:tw
         <!-- Profile Header -->
         <div class="tw-text-center tw-mb-6">
           <img [src]="getCollieImage(currentCollie)" 
+               (error)="onImageError($event)"
                [alt]="currentCollie.name"
                class="tw-w-24 tw-h-24 sm:tw-w-32 sm:tw-h-32 tw-rounded-full tw-object-cover tw-mx-auto tw-border-4 tw-border-gray-200">
           <h4 class="tw-text-xl sm:tw-text-2xl tw-font-semibold tw-text-gray-900 tw-mt-3">
             {{ currentCollie.name }}
           </h4>
-          <span [class]="'tw-inline-flex tw-px-3 tw-py-1 tw-text-sm tw-font-semibold tw-rounded-full tw-mt-2 ' + getApprovalStatusClass()">
-            {{ getApprovalStatusText() }}
+          <span [class]="'tw-inline-flex tw-px-3 tw-py-1 tw-text-sm tw-font-semibold tw-rounded-full tw-mt-2 ' + getApprovalStatusClass(currentCollie)">
+            {{ getApprovalStatusText(currentCollie) }}
           </span>
         </div>
 
